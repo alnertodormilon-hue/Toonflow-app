@@ -51,6 +51,8 @@
           {{ selectedMode === "startFrameOptional" ? "仅一张图片时作为尾帧；两张图片按顺序作为首帧、尾帧" : "图片引用按顺序作为首帧、尾帧" }}
         </div>
         <promptInput v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" expandable />
+        <p v-if="data.doubaoOperationId" class="referenceHint">豆包原任务已保留。请在设置→豆包账号处理官方确认或恢复，再点击箭头继续；停止等待不会重投。</p>
+        <el-button v-if="data.doubaoOperationId" text :disabled="generating" @click="resetDoubaoOperation().catch(error => showNodeError(error, '原任务核对'))">核对原任务后新建</el-button>
         <div class="promptFooter">
           <el-select
             v-model="data.model"
@@ -87,8 +89,8 @@
               class="sendButton"
               :icon="generating ? IconPlayerStop : IconArrowUp"
               :disabled="deleting || uploading || (!generating && (!generationPrompt || !selectedModel))"
-              :title="generating ? '停止生成' : '生成视频'"
-              :aria-label="generating ? '停止生成' : '生成视频'"
+              :title="generating ? '停止生成' : data.doubaoOperationId ? '继续原豆包任务' : '生成视频'"
+              :aria-label="generating ? '停止生成' : data.doubaoOperationId ? '继续原豆包任务' : '生成视频'"
               @click="generating ? generationController?.abort() : startGeneration().catch((error) => showNodeError(error, '视频生成失败'))" />
           </div>
         </div>
@@ -114,6 +116,7 @@ import referenceItem from "@toonflow/node-shared/referenceItem";
 import mediaHistory from "@toonflow/node-shared/mediaHistory";
 import mediaPrice from "@toonflow/node-shared/mediaPrice";
 import generationSettings from "./components/generationSettings.vue";
+import { readDoubaoOperation, reserveDoubaoOperation, finishDoubaoOperation, endDoubaoOperation } from "./doubaoOperation";
 
 defineOptions({
   inheritAttrs: false,
@@ -128,7 +131,7 @@ const { id, node, nodeProps, nodeEvent, outputs, files, ai, updateNodeInternals 
   label: "视频生成",
 });
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
-const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; model: string; duration?: number; resolution: string; ratio: string; mode: string; generateAudio: boolean });
+const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; model: string; duration?: number; resolution: string; ratio: string; mode: string; generateAudio: boolean; doubaoOperationId?: string });
 data.value.prompt ??= "";
 data.value.promptModel ??= [];
 data.value.model ??= "";
@@ -244,7 +247,11 @@ const previewUrl = files.useFileUrl(
 onMounted(() => {
   window.addEventListener("toonflow:plugin-installed", refreshProviderModels);
   window.addEventListener("toonflow:provider-config-changed", refreshProviderModels);
-  void loadModels().catch(error => { if (!disposed) showNodeError(error, "模型读取失败"); });
+  void loadModels().then(async () => {
+    if (disposed || !data.value.doubaoOperationId && selectedModel.value?.providerId !== "doubaoLocalVideo") return;
+    const saved = await readDoubaoOperation(files.getWorkspaceFiles(), id);
+    if (!disposed && saved && !saved.value.ended && !saved.value.result) data.value.doubaoOperationId = saved.value.operationId;
+  }).catch(error => { if (!disposed) showNodeError(error, "模型或豆包任务读取失败"); });
 });
 onScopeDispose(() => {
   disposed = true;
@@ -312,29 +319,58 @@ async function startGeneration() {
   if (uploading.value) throw new Error("视频正在替换，请等待完成");
   if (deleting.value) throw new Error("节点正在删除");
   if (!choice || !input) throw new Error("请先选择视频模型");
+  if (data.value.doubaoOperationId && choice.providerId !== "doubaoLocalVideo") throw new Error("节点还有豆包原任务，请先处理原任务后再切换供应商");
   if (!generationPrompt.value) throw new Error("请输入生成提示词");
   if (refList.value.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
   if (choice.mode?.length && !matchingModes.value.length) throw new Error("当前模型没有适合这些参考素材的生成模式，请更换模型或调整引用");
   const workspace = files.getWorkspaceFiles();
   const controller = new AbortController();
   generationController = controller;
+  let savedOperation: Awaited<ReturnType<typeof reserveDoubaoOperation>> | undefined;
   // ACT: 工具立即返回，任务由节点持有，停止或卸载时取消。
   generation = generationState.run(() => workspace
     .list()
-    .then(({ directory }) => {
+    .then(async ({ directory }) => {
       controller.signal.throwIfAborted();
+      if (choice.providerId === "doubaoLocalVideo") {
+        savedOperation = await reserveDoubaoOperation(workspace, id, outputFile.value?.url, data.value.doubaoOperationId);
+        data.value.doubaoOperationId = savedOperation.value.operationId;
+        input.operationId = savedOperation.value.operationId;
+        controller.signal.throwIfAborted();
+        if (savedOperation.recovered) return [savedOperation.recovered];
+      }
       return ai.generateVideo({ ...input, directory }, controller.signal);
     })
-    .then(([result]) => {
+    .then(async ([result]) => {
       controller.signal.throwIfAborted();
       if (!result) throw new Error("供应商未返回视频");
+      if (savedOperation && !savedOperation.recovered) await finishDoubaoOperation(workspace, id, savedOperation, result);
+      controller.signal.throwIfAborted();
       outputs.value.video = { dataType: "VIDEO", value: { url: result.path, mimeType: result.mimeType } };
+      if (choice.providerId === "doubaoLocalVideo") {
+        data.value.doubaoOperationId = undefined;
+      }
     }))
-    .catch((error) => showNodeError(error, "视频生成失败"))
+    .catch((error) => {
+      showNodeError(error, "视频生成失败");
+    })
     .finally(() => {
       generationController = undefined;
     });
   return { status: "generating" };
+}
+
+async function resetDoubaoOperation() {
+  if (generating.value || !data.value.doubaoOperationId) return;
+  const response = await fetch(`/api/doubao/jobs/operation?clientRequestId=${encodeURIComponent(data.value.doubaoOperationId)}`, {
+    cache: "no-store", headers: { "x-toonflow-workspace": "1" },
+  });
+  const result = await response.json();
+  if (!response.ok || result.code !== 200) throw new Error(result.message || "原任务读取失败");
+  if (result.data && !["failed", "cancelled"].includes(result.data.state))
+    throw new Error(result.data.state === "completed" ? "原视频已完成，请先继续取回；取回后可正常新建。" : "原任务尚未结束，请到设置→豆包账号处理；只有发送前可取消。");
+  await endDoubaoOperation(files.getWorkspaceFiles(), id);
+  data.value.doubaoOperationId = undefined;
 }
 
 nodeEvent.on("save", (reason) => {

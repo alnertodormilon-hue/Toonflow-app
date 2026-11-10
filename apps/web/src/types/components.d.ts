@@ -19,6 +19,7 @@ declare module 'vue' {
     Conversation: typeof import('./../components/agent/conversation.vue')['default']
     Developer: typeof import('./../components/settings/panels/developer/index.vue')['default']
     DeviceLink: typeof import('./../components/settings/panels/deviceLink.vue')['default']
+    Doubao: typeof import('./../components/settings/panels/doubao.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAutoResizer: typeof import('element-plus/es')['ElAutoResizer']
     ElBadge: typeof import('element-plus/es')['ElBadge']

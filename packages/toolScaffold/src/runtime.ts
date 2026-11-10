@@ -94,6 +94,8 @@ export interface MediaReference {
 export interface MediaGenerationRequest {
   providerId: string;
   modelId: string;
+  /** 可恢复生成的稳定操作号；恢复同一任务时保持不变。 */
+  operationId?: string;
   prompt: string;
   outputDirectory?: string;
   images?: MediaReference[];

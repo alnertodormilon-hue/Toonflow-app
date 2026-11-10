@@ -44,7 +44,7 @@ function isBrowserPageUrl(value: string) {
   return isWebUrl(value) || value === "chrome-error://chromewebdata/";
 }
 
-async function findExecutable(configured: string) {
+export async function findExecutable(configured: string) {
   if (configured && !isAbsolute(configured)) throw new Error("executablePath 必须是浏览器程序的绝对路径");
   // Electrobun 启动器修改环境变量后，Bun Worker 按原始大小写保存 Windows 环境变量。
   const env = process.platform === "win32"

@@ -1,4 +1,5 @@
 import * as assets from "@/utils/assets";
+import * as doubao from "@/utils/doubao";
 import * as browser from "@/utils/browser";
 import * as singleAgent from "@/utils/singleAgent";
 import * as desktop from "@/utils/desktop";
@@ -30,6 +31,7 @@ import * as mentionFiles from "@/agent/mentionFiles";
 
 export default {
   assets,
+  doubao,
   browser,
   singleAgent,
   desktop,

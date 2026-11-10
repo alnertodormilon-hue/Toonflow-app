@@ -61,7 +61,8 @@ export type NodeAiTool = {
 
 async function readResult<T>(response: Response): Promise<T> {
   const result = await response.json();
-  if (!response.ok || result.code !== 200) throw new Error(result.message || `AI 请求失败（HTTP ${response.status}）`);
+  if (!response.ok || result.code !== 200) throw Object.assign(new Error(result.message || `AI 请求失败（HTTP ${response.status}）`),
+    typeof result.data?.code === "string" ? { code: result.data.code } : {});
   return result.data;
 }
 

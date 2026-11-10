@@ -25,7 +25,7 @@
               <component
                 :is="activePanel.component"
                 v-bind="
-                  ['pluginMarket', 'languageModel', 'mediaModel', 'personalization', 'deviceLink'].includes(activePanel.id) ? { visible } : {}
+                  ['pluginMarket', 'languageModel', 'mediaModel', 'personalization', 'deviceLink', 'doubao'].includes(activePanel.id) ? { visible } : {}
                 " />
             </keep-alive>
           </transition>
@@ -64,6 +64,7 @@ const settingsPanels = [
     component: defineAsyncComponent(() => import("./panels/languageModel/index.vue")),
   },
   { id: "mediaModel", label: "媒体模型", icon: IconPhotoVideo, component: defineAsyncComponent(() => import("./panels/mediaModel/index.vue")) },
+  ...(!isMobile ? [{ id: "doubao", label: "豆包账号", icon: IconUserCog, component: defineAsyncComponent(() => import("./panels/doubao.vue")) }] : []),
   {
     id: "pluginMarket",
     label: "插件市场",

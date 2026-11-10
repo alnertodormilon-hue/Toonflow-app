@@ -42,6 +42,8 @@
 
 > 🌐 **支持 21 种界面语言** · [查看支持的语言](#languages)
 
+本分支新增Windows自有豆包账号与视频节点接入：[开发规格、使用步骤与验证边界](./docs/doubaoIntegration.md)。入口为“设置→豆包账号”，首版保留官方页面确认及本人验证。
+
 <div align="center">
 
 <p align="center">

@@ -131,6 +131,7 @@ async function prepareRequest<T>(directory: string | undefined, mediaType: "imag
     firstFrame: (await references(request.firstFrame ? [request.firstFrame] : undefined, "image"))?.[0],
     lastFrame: (await references(request.lastFrame ? [request.lastFrame] : undefined, "image"))?.[0],
     ratio: request.ratio, resolution: request.resolution, duration: request.duration, generateAudio: request.generateAudio, mode: request.mode,
+    ...(request.operationId ? { other: { operationId: request.operationId } } : {}),
   };
 }
 
