@@ -13,6 +13,7 @@ export default Router().post("/", validateFields({ clientRequestId: z.uuid(), ac
   const accountId = req.body.accountId || existing?.accountId || u.doubao.getMetadata("defaultAccountId");
   if (!accountId) throw Object.assign(new Error("请先在豆包账号设置中选择默认账号"), { status: 422, code: "ACCOUNT_REQUIRED" });
   const result = u.doubao.createJob({ clientRequestId, accountId, model, prompt, duration, ratio, resolution, assetIds });
-  if (result.created) void u.doubao.prepareJob(result.job.id);
-  res.status(result.created ? 202 : 200).json(success(u.doubao.publicJob(result.job)));
+  if (result.created || result.job.automatic && result.job.state === "needsLogin" && !result.job.initialSent && !result.job.initialAttempted)
+    void u.doubao.prepareJob(result.job.id);
+  res.status(result.created ? 202 : 200).json(success(u.doubao.publicJob(u.doubao.getJob(result.job.id))));
 });

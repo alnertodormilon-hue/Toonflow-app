@@ -6,6 +6,7 @@ import { assertIdentity, getProfile, officialJson } from "./browser";
 import { dataRoot, getAsset, getJob, patchJob } from "./store";
 import { canonical, invalid, object, type Job } from "./types";
 import { messageText, referenceUris, responseObjects, uploadedUri, validateInitialRequest, videoObjects, visitValues } from "./protocol";
+import { configureVideoPage, writeVideoText, sendVideoText } from "./officialPage";
 
 const pages = new Map<string, Page>();
 const preparing = new Map<string, Promise<void>>();
@@ -36,10 +37,12 @@ function observeJob(id: string) {
   observer.timer.unref?.();
 }
 
-function updateFailure(id: string, error: unknown) {
+function updateFailure(id: string, error: unknown, blocked = false) {
   const job = getJob(id);
   if (["completed", "cancelled", "failed"].includes(job.state)) return;
-  const code = typeof object(error).code === "string" ? object(error).code as string : "OFFICIAL_PAGE_NOT_READY";
+  const stageCodes = { openingPage: "OFFICIAL_PAGE_NOT_READY", selectingVideo: "VIDEO_PARAMETERS_NOT_READY",
+    uploadingReferences: "UPLOAD_BINDING_UNKNOWN", writingPrompt: "VIDEO_EDITOR_NOT_READY", sending: "SUBMISSION_NOT_ACKNOWLEDGED" };
+  const code = typeof object(error).code === "string" ? object(error).code as string : stageCodes[job.stage ?? "openingPage"];
   const safeMessages: Record<string, string> = {
     LOGIN_REQUIRED: "请在官方窗口完成登录，并在豆包账号设置中保存登录状态。",
     ACCOUNT_MISMATCH: "登录身份与任务账号不一致，请恢复原账号。",
@@ -48,9 +51,18 @@ function updateFailure(id: string, error: unknown) {
     UPLOAD_BINDING_UNKNOWN: "图片资源未能唯一核验，请停止提交并检查官方页面。",
     DUPLICATE_SUBMISSION_BLOCKED: "已阻止额外生成请求。请只读核对原任务，不要再次点击发送。",
     PAID_OR_RIGHTS_CONFIRMATION: "官方回复涉及费用或素材责任，程序不会继续确认，请本人查看。",
+    OFFICIAL_PAGE_NOT_READY: "豆包官方页面加载未完成，本次尚未发送。请检查官方窗口和网络后，在原节点重新开始。",
+    VIDEO_PARAMETERS_NOT_READY: "未能自动打开视频模式或设定Mini、15秒、9:16，本次尚未发送。",
+    VIDEO_EDITOR_NOT_READY: "官方视频输入框尚未准备完成，本次尚未发送。",
+    SUBMISSION_NOT_ACKNOWLEDGED: "已操作发送，但尚未确认受理，请保留原任务并只读核对，不要重发。",
   };
-  patchJob(id, { state: job.initialSent ? job.conversationId ? "needsConfirmation" : "submissionUnknown" : code === "LOGIN_REQUIRED" || code === "ACCOUNT_MISMATCH" ? "needsLogin" : "needsConfirmation",
-    errorCode: code, canConfirmParameters: false, message: safeMessages[code] ?? "官方页面尚未准备完成。请切换到视频生成，检查登录和素材后继续准备；不要重复发送。" });
+  const attempted = job.initialSent || job.initialAttempted && !blocked;
+  patchJob(id, { state: attempted ? job.conversationId ? "needsConfirmation" : "submissionUnknown"
+    : code === "LOGIN_REQUIRED" || code === "ACCOUNT_MISMATCH" ? "needsLogin" : "failed",
+    initialAttempted: blocked && !job.initialSent ? false : job.initialAttempted,
+    errorCode: code, canConfirmParameters: false, message: safeMessages[code] ?? (attempted
+      ? "原任务发生异常，请保留记录并只读核对，程序不会重新提交。"
+      : "豆包自动准备未完成，本次尚未发送；账号已释放，可在原节点重新开始。") });
 }
 
 async function intercept(id: string, request: HTTPRequest) {
@@ -70,13 +82,16 @@ async function intercept(id: string, request: HTTPRequest) {
     const data = JSON.parse(request.postData() ?? "{}");
     if (!job.initialSent) {
       const binding = validateInitialRequest(object(data), job);
-      patchJob(id, { initialSent: true, localMessageId: binding.localMessageId, state: "submitting", errorCode: undefined,
+      patchJob(id, { initialSent: true, sendStartedAt: job.sendStartedAt ?? new Date().toISOString(),
+        localMessageId: binding.localMessageId, localMessageIds: binding.localMessageIds, state: "submitting", errorCode: undefined,
         message: "已记录一次发送动作，正在等待官方回执。" });
     } else {
       const messages = object(data).messages;
       const text = Array.isArray(messages) && messages.length === 1 ? canonical(messageText(messages[0])) : "";
-      if (job.state !== "needsConfirmation" || !job.canConfirmParameters || job.confirmationSent || !job.conversationId
-        || object(data).conversation_id !== job.conversationId || !["确认生成", "确认，开始生成", "确认"].includes(text))
+      const expected = ["确认生成", "确认，开始生成", "确认"].flatMap(value => [value, `生成视频：${value}，${job.ratio}，${job.duration}s，${job.resolution}`]);
+      if (!(job.state === "needsConfirmation" || job.automatic && job.confirmationAttempted)
+        || !job.canConfirmParameters || job.confirmationSent || !job.conversationId
+        || object(data).conversation_id !== job.conversationId || !expected.includes(text))
         invalid("禁止重复发送或接受未核对的确认条件", 409, "DUPLICATE_SUBMISSION_BLOCKED");
       if (referenceUris(messages[0]).length) invalid("确认阶段不允许替换或追加参考图", 409, "INTENT_MISMATCH");
       const localMessageId = object(messages[0]).local_message_id;
@@ -88,7 +103,7 @@ async function intercept(id: string, request: HTTPRequest) {
     observeJob(id);
   } catch (error) {
     if (!request.isInterceptResolutionHandled()) await request.abort("blockedbyclient");
-    updateFailure(id, error);
+    updateFailure(id, error, true);
   }
 }
 
@@ -127,6 +142,7 @@ async function createTaskPage(id: string) {
   if (!getJob(id).initialSent) patchJob(id, { referenceUris: [] });
   page.once("close", () => { if (pages.get(id) === page) pages.delete(id); });
   await page.setRequestInterception(true);
+  await page.setBypassServiceWorker(true);
   page.on("request", request => { void intercept(id, request).catch(() => updateFailure(id, new Error("官方请求拦截异常"))); });
   page.on("response", response => {
     const url = new URL(response.url());
@@ -149,18 +165,22 @@ function taskPage(id: string) {
 
 async function prepare(id: string) {
   let job = getJob(id);
-  if (job.initialSent || ["completed", "cancelled"].includes(job.state)) invalid("原任务已开始，请仅查询或恢复下载", 409, "ALREADY_DISPATCHED");
-  patchJob(id, { state: "preparing", message: "正在准备独立官方页面和两张参考图。", errorCode: undefined });
+  if (job.initialSent || job.initialAttempted || ["completed", "cancelled", "failed"].includes(job.state)) invalid("原任务已开始或结束，请仅查询原任务", 409, "ALREADY_DISPATCHED");
+  patchJob(id, { state: "preparing", stage: "openingPage", message: "正在打开关联账号的豆包官方页面。", errorCode: undefined });
   const page = await taskPage(id);
   await assertIdentity(job.accountId, page);
   job = getJob(id);
   if (job.state === "cancelled") return;
+  patchJob(id, { stage: "selectingVideo", message: "正在自动切换视频生成，并设定Mini、15秒、9:16。" });
+  await configureVideoPage(page);
+  if (getJob(id).state === "cancelled") return;
+  patchJob(id, { stage: "uploadingReferences", message: "正在自动上传并核对两张参考图。" });
   if (job.referenceUris?.length !== 2) {
-    const input = await page.waitForSelector("input[type=file]", { timeout: 45000 });
-    if (!input) invalid("官方页面尚未出现图片上传入口", 409, "OFFICIAL_PAGE_NOT_READY");
     const uris: string[] = [...(job.referenceUris ?? [])];
     for (const assetId of job.assetIds.slice(uris.length)) {
       if (getJob(id).state === "cancelled") return;
+      const input = await page.waitForSelector('input[type="file"][accept*=".png"]', { timeout: 30000 });
+      if (!input) invalid("官方页面尚未出现图片上传入口", 409, "UPLOAD_BINDING_UNKNOWN");
       const asset = getAsset(assetId);
       if (createHash("sha256").update(await readFile(asset.path)).digest("hex") !== asset.sha256)
         invalid("冻结参考图字节发生变化", 409, "INTENT_MISMATCH");
@@ -168,8 +188,7 @@ async function prepare(id: string) {
         const url = new URL(response.url());
         return url.protocol === "https:" && url.searchParams.get("Action") === "CommitImageUpload";
       }, { timeout: 90000 });
-      await input.uploadFile(asset.path);
-      const response = await uploaded;
+      const [response] = await Promise.all([uploaded, input.uploadFile(asset.path)]);
       if (!response.ok()) invalid("官方参考图上传失败", 409, "UPLOAD_BINDING_UNKNOWN");
       uris.push(uploadedUri(await response.json()));
       patchJob(id, { referenceUris: [...uris] });
@@ -177,16 +196,21 @@ async function prepare(id: string) {
     patchJob(id, { referenceUris: uris });
   }
   if (getJob(id).state === "cancelled") return;
-  const editor = await page.$("textarea") ?? await page.$('[contenteditable="true"][role="textbox"]') ?? await page.$('[contenteditable="true"]');
-  if (!editor) invalid("请先在官方窗口选择视频生成", 409, "OFFICIAL_PAGE_NOT_READY");
-  await editor.click();
-  await page.keyboard.down("Control");
-  await page.keyboard.press("A");
-  await page.keyboard.up("Control");
-  await page.keyboard.sendCharacter(job.prompt);
+  patchJob(id, { stage: "writingPrompt", message: "正在自动填写完整提示词。" });
+  await writeVideoText(page, job.prompt);
   if (getJob(id).state === "cancelled") return;
-  patchJob(id, { state: "needsConfirmation", message: "请在官方窗口核对两图、完整原文、Mini/15秒/9:16/720p及免费条件，亲自发送一次；不要接受付费或素材责任提示。" });
-  await page.bringToFront();
+  if (!job.automatic) {
+    patchJob(id, { state: "needsConfirmation", message: "旧版任务保留官方确认方式，请在官方窗口核对后发送一次。" });
+    await page.bringToFront();
+    return;
+  }
+  await sendVideoText(page, () => {
+    const current = getJob(id);
+    if (current.state !== "preparing" || current.initialAttempted || current.initialSent) invalid("本任务不再允许发送", 409, "DUPLICATE_SUBMISSION_BLOCKED");
+    patchJob(id, { initialAttempted: true, sendStartedAt: new Date().toISOString(), state: "submitting", stage: "sending",
+      message: "正在自动提交一次，等待豆包受理。" }, current.stateVersion);
+  });
+  observeJob(id);
 }
 
 export function prepareJob(id: string) {
@@ -266,7 +290,7 @@ async function download(id: string, page: Page, video: Record<string, any>) {
 
 async function refresh(id: string, allowDownload: boolean) {
   const job = getJob(id);
-  if (job.initialSent && !job.conversationId && job.state === "submitting" && Date.now() - Date.parse(job.updatedAt) > 60000)
+  if ((job.initialSent || job.initialAttempted) && !job.conversationId && job.state === "submitting" && Date.now() - Date.parse(job.updatedAt) > 90000)
     return patchJob(id, { state: "submissionUnknown", message: "发送后仍未取得可追踪回执，请只读核对；不会重新提交。" });
   if (!job.conversationId || !job.initialSent || ["completed", "cancelled", "failed"].includes(job.state)) return job;
   if (job.state === "downloadFailed" && !allowDownload) return job;
@@ -281,13 +305,17 @@ async function refresh(id: string, allowDownload: boolean) {
   if (result.status_code !== 0) invalid("原会话暂不可读取，请稍后只读恢复", 409, "UPSTREAM_READ_FAILED");
   const messages = object(object(result.downlink_body).pull_singe_chain_downlink_body).messages;
   if (!Array.isArray(messages)) invalid("原会话结构发生变化", 409, "UPSTREAM_READ_FAILED");
-  const question = messages.find(value => object(value).local_message_id === job.localMessageId);
-  if (!question) return patchJob(id, { state: "submissionUnknown", message: "未找到本任务实际消息，保留原任务，只读核对。" });
+  const initialIds = job.localMessageIds ?? [job.localMessageId];
+  const questions = initialIds.map(localId => messages.find(value => object(value).local_message_id === localId));
+  if (questions.some(value => !value)) return patchJob(id, Date.now() - Date.parse(job.sendStartedAt ?? job.updatedAt) < 90000
+    ? { state: "awaitingTask", message: "已取得会话回执，正在等待本次图片与正文消息同步。" }
+    : { state: "submissionUnknown", message: "未找到本任务全部实际消息，保留原任务，只读核对。" });
   const expected = [job.prompt, `生成视频：${job.prompt}，${job.ratio}，${job.duration}s，${job.resolution}`].map(canonical);
-  if (!expected.includes(canonical(messageText(question))) || JSON.stringify(referenceUris(question)) !== JSON.stringify(job.referenceUris))
+  if (!expected.includes(canonical(questions.map(messageText).filter(Boolean).join("\n")))
+    || JSON.stringify(questions.flatMap(referenceUris)) !== JSON.stringify(job.referenceUris))
     invalid("服务端原文或图片绑定不一致，停止取回", 409, "INTENT_MISMATCH");
   const users = messages.filter(value => object(value).user_type === 1);
-  if (users.some(value => ![job.localMessageId, job.confirmationLocalMessageId].includes(object(value).local_message_id)))
+  if (users.some(value => ![...initialIds, job.confirmationLocalMessageId].includes(object(value).local_message_id)))
     invalid("原会话存在其他用户消息，无法唯一绑定任务", 409, "CONVERSATION_AMBIGUOUS");
   const replies = messages.filter(value => object(value).user_type !== 1);
   const videos = replies.flatMap(videoObjects);
@@ -310,11 +338,23 @@ async function refresh(id: string, allowDownload: boolean) {
   if (videos.length || tasks.length) return patchJob(id, { state: "generating", message: "已发现本任务视频对象，正在等待原视频完成。" });
   const clarifying = replies.find(value => object(object(value).ext).is_creation_clarifying === "1");
   if (clarifying) {
+    if (job.confirmationSent || job.confirmationAttempted) return patchJob(id, { state: "awaitingTask", message: "已确认原参数，等待实际视频任务；不会重复确认。" });
     const text = messageText(clarifying);
     const safe = !financialOrRights.test(text) && /(?:15\s*秒|15s)/i.test(text) && text.includes("9:16") && /Mini/i.test(text) && /720p/i.test(text);
-    return patchJob(id, { state: "needsConfirmation", canConfirmParameters: safe && !job.confirmationSent,
+    const current = patchJob(id, { state: "needsConfirmation", canConfirmParameters: safe,
       errorCode: safe ? undefined : "CONFIRMATION_NOT_ALLOWED",
-      message: safe ? "官方要求参数确认。请本人核对原文与素材，在原窗口仅回复“确认生成”一次。" : "官方确认条件无法严格核对或涉及新授权，请本人查看；程序不继续发送。" });
+      message: safe ? "官方要求确认原参数。" : "官方确认条件无法严格核对或涉及新授权，已停止自动提交。" });
+    if (!job.automatic || !safe) return current;
+    const task = await taskPage(id);
+    await assertIdentity(job.accountId, task);
+    await writeVideoText(task, "确认生成");
+    await sendVideoText(task, () => {
+      const latest = getJob(id);
+      if (latest.confirmationAttempted || latest.confirmationSent || !latest.canConfirmParameters)
+        invalid("原参数确认已操作，不能再次提交", 409, "DUPLICATE_SUBMISSION_BLOCKED");
+      patchJob(id, { state: "submitting", confirmationAttempted: true, message: "正在自动确认同一任务的原参数一次。" }, latest.stateVersion);
+    });
+    return getJob(id);
   }
   return patchJob(id, { state: "awaitingTask", message: "已找到原消息，实际视频任务尚未出现；继续查询，不重发。" });
 }
@@ -338,7 +378,7 @@ export async function resumeJob(id: string, mode: "prepare" | "reconcile" | "dow
   const job = getJob(id);
   if (job.stateVersion !== version) invalid("任务状态已变化，请刷新后恢复", 409, "STALE_ACTION");
   if (mode === "prepare") {
-    if (job.initialSent || ["completed", "cancelled", "failed"].includes(job.state)) invalid("此任务只允许原任务查询", 409, "ALREADY_DISPATCHED");
+    if (job.initialSent || job.initialAttempted || ["completed", "cancelled", "failed"].includes(job.state)) invalid("此任务只允许原任务查询", 409, "ALREADY_DISPATCHED");
     void prepareJob(id);
     return getJob(id);
   }

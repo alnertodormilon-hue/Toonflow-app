@@ -28,6 +28,8 @@ function db() {
   // ACT: 重启只把发送中改为未知，不重放任何生成。其他任务由用户显式恢复。
   for (const job of listJobs()) {
     if (job.state === "submitting") patchJob(job.id, { state: "submissionUnknown", message: "提交期间服务重启，请先核对原任务。" });
+    else if (job.automatic && !job.initialSent && !job.initialAttempted && ["queued", "preparing"].includes(job.state))
+      patchJob(job.id, { state: "failed", errorCode: "PREPARATION_INTERRUPTED", message: "准备期间应用重启，本次尚未发送，账号已释放。" });
   }
   return database;
 }
@@ -105,16 +107,17 @@ export function createJob(intent: VideoIntent) {
     const account = getAccount(intent.accountId);
     if (account.state === "disabled") invalid("所选账号已禁用", 409, "ACCOUNT_DISABLED");
     const assets = intent.assetIds.map(getAsset);
-    const intentHash = createHash("sha256").update(JSON.stringify({ ...intent, clientRequestId: undefined,
-      assetIds: assets.map(asset => asset.sha256), billing: "officialConfirmation", watermark: "officialWithoutVisible" })).digest("hex");
     const existing = readBody<Job>(db().query("SELECT body FROM jobs WHERE operationId=?").get(intent.clientRequestId));
+    const automatic = existing ? !!existing.automatic : true;
+    const intentHash = createHash("sha256").update(JSON.stringify({ ...intent, clientRequestId: undefined,
+      assetIds: assets.map(asset => asset.sha256), billing: automatic ? "automaticOfficialSubmission" : "officialConfirmation", watermark: "officialWithoutVisible" })).digest("hex");
     if (existing) {
       if (existing.intentHash !== intentHash) invalid("原操作的内容已变化，请先处理原任务或明确新建任务", 409, "IDEMPOTENCY_CONFLICT");
       return { job: existing, created: false };
     }
     if (listJobs().some(job => job.accountId === account.id && pendingStates.includes(job.state))) invalid("此账号还有未决任务，请先恢复或处理原任务", 409, "ACCOUNT_BUSY");
     const now = new Date().toISOString();
-    const job: Job = { ...intent, id: randomUUID(), intentHash, state: "queued", stateVersion: 1, createdAt: now,
+    const job: Job = { ...intent, automatic, id: randomUUID(), intentHash, state: "queued", stateVersion: 1, createdAt: now,
       updatedAt: now, initialSent: false, confirmationSent: false, message: "等待准备官方页面" };
     db().query("INSERT INTO jobs(id,operationId,intentHash,accountId,state,body) VALUES(?,?,?,?,?,?)")
       .run(job.id, intent.clientRequestId, intentHash, account.id, job.state, JSON.stringify(job));
@@ -140,7 +143,7 @@ export function publicJob(job: Job) {
 
 export function cancelJob(id: string, version: number) {
   const job = getJob(id);
-  if (job.initialSent || !(["queued", "preparing", "needsLogin", "needsConfirmation"] as JobState[]).includes(job.state))
+  if (job.initialSent || job.initialAttempted || !(["queued", "preparing", "needsLogin", "needsConfirmation"] as JobState[]).includes(job.state))
     invalid("已发送或受理未知的任务不能在本地取消；停止等待不会停止上游生成", 409, "ALREADY_DISPATCHED");
   return patchJob(id, { state: "cancelled", message: "已在发送前取消" }, version);
 }

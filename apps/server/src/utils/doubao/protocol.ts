@@ -24,19 +24,24 @@ export function validateInitialRequest(payload: Record<string, any>, job: Job) {
     || params.ratio !== job.ratio || params.resolution !== job.resolution)
     invalid("请在官方窗口选择Mini、15秒、9:16、720p；当前请求参数与任务不一致", 409, "INTENT_MISMATCH");
   const messages = payload.messages;
-  if (!Array.isArray(messages) || messages.length !== 1) invalid("生成请求消息结构发生变化，请停止并检查", 409, "INTENT_MISMATCH");
-  const actualText = canonical(messageText(messages[0]));
+  if (!Array.isArray(messages) || messages.length < 1 || messages.length > 2
+    || messages.filter(message => messageText(message)).length !== 1)
+    invalid("生成请求消息结构发生变化，请停止并检查", 409, "INTENT_MISMATCH");
+  // ACT: 官网可将两图和正文拆成两条消息；仍只放行同一次提交中的完整冻结内容。
+  const actualText = canonical(messages.map(messageText).filter(Boolean).join("\n"));
   const expected = [job.prompt, `生成视频：${job.prompt}，${job.ratio}，${job.duration}s，${job.resolution}`].map(canonical);
   if (!expected.includes(actualText)) invalid("实际发送正文与冻结提示词不一致，已阻止提交", 409, "INTENT_MISMATCH");
   const cached = object(params.input_box_content).user_input_content;
   if (typeof cached !== "string" || canonical(cached) !== canonical(job.prompt)) invalid("输入框缓存与冻结原文不一致", 409, "INTENT_MISMATCH");
-  const refs = referenceUris(messages[0]);
+  const refs = messages.flatMap(referenceUris);
   if (job.referenceUris?.length !== 2 || JSON.stringify(refs) !== JSON.stringify(job.referenceUris))
     invalid("实际图片数量或顺序与已上传参考图不一致，已阻止提交", 409, "INTENT_MISMATCH");
-  const localMessageId = object(messages[0]).local_message_id;
-  if (typeof localMessageId !== "string" || !localMessageId) invalid("请求缺少可恢复消息标识", 409, "INTENT_MISMATCH");
+  const localMessageIds = messages.map(message => object(message).local_message_id);
+  if (localMessageIds.some(id => typeof id !== "string" || !id) || new Set(localMessageIds).size !== localMessageIds.length)
+    invalid("请求缺少唯一可恢复消息标识", 409, "INTENT_MISMATCH");
+  const localMessageId = object(messages.find(message => messageText(message))).local_message_id as string;
   if (payload.conversation_id && payload.conversation_id !== "0") invalid("请在官方窗口新建对话后提交，避免与旧任务串联", 409, "CONVERSATION_NOT_NEW");
-  return { localMessageId };
+  return { localMessageId, localMessageIds: localMessageIds as string[] };
 }
 
 export function visitValues(value: unknown, visitor: (key: string, value: unknown) => void, depth = 0) {

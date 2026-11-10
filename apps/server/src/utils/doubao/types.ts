@@ -31,6 +31,11 @@ export type Job = VideoIntent & {
   updatedAt: string;
   message: string;
   errorCode?: string;
+  automatic?: boolean;
+  initialAttempted?: boolean;
+  confirmationAttempted?: boolean;
+  sendStartedAt?: string;
+  stage?: "openingPage" | "selectingVideo" | "uploadingReferences" | "writingPrompt" | "sending";
   initialSent: boolean;
   confirmationSent: boolean;
   canConfirmParameters?: boolean;
@@ -38,6 +43,7 @@ export type Job = VideoIntent & {
   conversationId?: string;
   conversationType?: number;
   localMessageId?: string;
+  localMessageIds?: string[];
   questionId?: string;
   sectionId?: string;
   referenceUris?: string[];

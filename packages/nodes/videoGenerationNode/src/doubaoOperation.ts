@@ -28,6 +28,16 @@ export async function reserveDoubaoOperation(files: WorkspaceFiles, nodeId: stri
   const path = operationPath(nodeId);
   let saved = await readDoubaoOperation(files, nodeId);
   if (saved?.value.result && currentOutput !== saved.value.result.path) return { ...saved, recovered: saved.value.result };
+  if (saved && !saved.value.ended && !saved.value.result) {
+    const response = await fetch(`/api/doubao/jobs/operation?clientRequestId=${encodeURIComponent(saved.value.operationId)}`, {
+      cache: "no-store", headers: { "x-toonflow-workspace": "1" },
+    });
+    const result = await response.json();
+    if (!response.ok || result.code !== 200) throw new Error(result.message || "原任务读取失败，已停止提交");
+    // ACT: 只有确定未操作发送的终态任务，才允许本次新点击使用新操作号。
+    if (result.data && ["failed", "cancelled"].includes(result.data.state) && !result.data.initialSent && !result.data.initialAttempted)
+      saved.value.ended = true;
+  }
   if (!saved || saved.value.ended || saved.value.result) {
     const value: Operation = { operationId: !saved && operationId ? operationId : crypto.randomUUID() };
     if (saved) await files.writeTextSnapshot(path, JSON.stringify(value), saved.snapshot);

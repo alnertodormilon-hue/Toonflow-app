@@ -36,10 +36,10 @@ export default {
   id: "doubaoLocalVideo",
   label: "豆包本机视频",
   icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b82f6'/%3E%3Cpath d='M10 8h5a8 8 0 0 1 0 16h-5zm4 4v8h1a4 4 0 0 0 0-8z' fill='white'/%3E%3C/svg%3E",
-  version: "1.0.0",
-  readme: "Windows自有账号。请在设置→豆包账号登录并配置本机网关。首版使用独立官方窗口，由本人核对免费条件及必要确认；验证、付费与受理未知不自动换号重投。剩余免费次数无法准确读取时显示未知。",
+  version: "1.1.0",
+  readme: "Windows自有账号。在设置→豆包账号保存登录并选择默认账号后，画布点击生成将自动准备素材和提交。登录、人机验证及新的付费或素材授权提示需要本人处理；受理未知不自动换号重投。准确免费余额仍显示未知。",
   rules,
-  models: [{ id: "seedance_v2.0_mini", label: "Seedance 2.0 Mini（官方确认）", type: "video", mode: [["imageReference:2"]], audio: true,
+  models: [{ id: "seedance_v2.0_mini", label: "Seedance 2.0 Mini（账号自动提交）", type: "video", mode: [["imageReference:2"]], audio: true,
     durationResolutionMap: [{ duration: [15], resolution: ["720p"] }] }],
   async getPrice() { return { price: "账号权益", tips: "准确免费余额未知；请在官方窗口核对本次权益。" }; },
   async generateVideo(request) {
