@@ -13,7 +13,7 @@ const projectDir = realpathSync(resolve(import.meta.dirname, "../../.."));
 process.chdir(projectDir);
 const nsisDir = resolve("build/desktop/nsis");
 const artifactDir = resolve(desktopConfig.build.artifactFolder);
-const outputFile = join(artifactDir, `toonflow-${desktopConfig.app.version}-Setup.exe`);
+const outputFile = join(artifactDir, `${desktopConfig.app.name}-${desktopConfig.app.version}-Setup.exe`);
 const installerDir = resolve("apps/desktop/installer");
 const appIcon = resolve("packages/assets/logo.ico");
 const makensis = process.env.NSIS_PATH ?? "C:/Program Files (x86)/NSIS/makensis.exe";
@@ -97,7 +97,7 @@ try {
   await write(tarFile, Bun.zstdDecompressSync(archive));
   await $`${makensis} /INPUTCHARSET UTF8 /DwebView2Dir=${webViewDir} /DrunningChecker=${runningChecker} /DappIcon=${appIcon} /DappVersion=${
     desktopConfig.app.version
-  } /DappIdentifier=${desktopConfig.app.identifier} /DappTar=${tarFile} /DappHash=${manifest.hash} /DoutputFile=${outputFile} /DinitializeInstallScript=${initializeInstallScript} ${join(installerDir, "installer.nsi")}`;
+  } /DappName=${desktopConfig.app.name === "toonflow" ? "Toonflow" : desktopConfig.app.name} /DappIdentifier=${desktopConfig.app.identifier} /DappTar=${tarFile} /DappHash=${manifest.hash} /DoutputFile=${outputFile} /DinitializeInstallScript=${initializeInstallScript} ${join(installerDir, "installer.nsi")}`;
   console.log(`NSIS 安装包：${outputFile}`);
 } finally {
   if (dirname(realpathSync(stagingDir)) !== realpathSync(nsisDir)) throw new Error("拒绝清理暂存目录以外的路径。");

@@ -44,7 +44,7 @@ async function restoreInstallRegistration(installDirectory: string) {
         await execFileAsync("reg.exe", ["add", registryKey, "/v", name, "/t", "REG_SZ", "/d", command, "/f"], { windowsHide: true });
       }
       const protocolLauncher = resolve(PATHS.RESOURCES_FOLDER, "app/protocolLauncher.exe");
-      if (existsSync(protocolLauncher)) {
+      if (identifier === "local.toonflow.desktop" && existsSync(protocolLauncher)) {
         const protocolKey = "HKCU\\Software\\Classes\\toonflow";
         const commandKey = `${protocolKey}\\shell\\open\\command`;
         const command = `"${protocolLauncher}" "%1"`;
@@ -126,7 +126,9 @@ async function start() {
     setRuntimeHost("desktop");
     const { createApp } = await import("@toonflow/server/app");
     const { closeBrowsers } = await import("@toonflow/server/browser");
-    const { hash, version } = await file(resolve(PATHS.RESOURCES_FOLDER, "version.json")).json();
+    const versionInfo = await file(resolve(PATHS.RESOURCES_FOLDER, "version.json")).json();
+    const { hash, version, identifier } = versionInfo;
+    const isolatedTest = identifier === "local.toonflow.doubaoTest";
     if (typeof hash !== "string" || !hash) throw new Error(t`应用构建标识缺失，无法同步内置插件`);
     const app = await createApp({
       webRoot: resolve(PATHS.VIEWS_FOLDER, "mainview"),
@@ -158,7 +160,7 @@ async function start() {
     const width = Math.min(1280, workArea.width - 64);
     const height = Math.min(960, workArea.height - 64);
     const mainWindow = new BrowserWindow({
-      title: "Toonflow",
+      title: isolatedTest ? "Toonflow 豆包测试版" : "Toonflow",
       url: `http://127.0.0.1:${connection.port}/?desktop=1${connection.remote ? "&remote=1" : ""}`,
       hidden: Boolean(splash),
       frame: {
@@ -241,7 +243,12 @@ async function start() {
       },
       openDevTools() { mainWindow.webview.openDevTools(); },
       // ACT: Windows 使用两阶段退出；Intel Mac 由兼容入口适配 1.18.1 更新器。
-      updater: process.platform === "win32" ? createWindowsUpdater(PATHS.RESOURCES_FOLDER, Utils as unknown as Parameters<typeof createWindowsUpdater>[1]) : Updater,
+      // ACT: 独立测试分发不使用正式版更新通道，避免被常规版本替换。
+      updater: isolatedTest ? {
+        async getLocalInfo() { return versionInfo; },
+        updateInfo() { return { updateAvailable: false, updateReady: false }; },
+        async checkForUpdate() { return { error: "豆包测试版请使用新的测试安装包更新" }; },
+      } : process.platform === "win32" ? createWindowsUpdater(PATHS.RESOURCES_FOLDER, Utils as unknown as Parameters<typeof createWindowsUpdater>[1]) : Updater,
     } satisfies DesktopRuntime;
     if (process.platform === "win32") {
       // ACT: Electrobun 2.0.1 未设置 Windows 窗口图标，复用构建产物中的应用 ICO。

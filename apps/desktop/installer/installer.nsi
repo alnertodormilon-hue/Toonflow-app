@@ -6,7 +6,9 @@ XPStyle on
 ManifestDPIAware true
 SetFont "Microsoft YaHei UI" 9
 
-!define appName "Toonflow"
+!ifndef appName
+  !define appName "Toonflow"
+!endif
 !define uninstallKey "Software\Microsoft\Windows\CurrentVersion\Uninstall\${appIdentifier}.stable"
 Var removeUserData
 Var removeUserDataCheckbox
@@ -205,12 +207,14 @@ tarReady:
   WriteRegStr HKCU "${uninstallKey}" "UninstallString" '$\"$INSTDIR\UninstallNSIS.exe$\"'
   WriteRegStr HKCU "${uninstallKey}" "QuietUninstallString" '$\"$INSTDIR\UninstallNSIS.exe$\" /S'
   IfErrors installFailed
+!if "${appIdentifier}" == "local.toonflow.desktop"
   StrCpy $installStep "注册 toonflow:// 协议"
   WriteRegStr HKCU "Software\Classes\toonflow" "" "URL:Toonflow Protocol"
   WriteRegStr HKCU "Software\Classes\toonflow" "URL Protocol" ""
   WriteRegStr HKCU "Software\Classes\toonflow\DefaultIcon" "" '$\"$INSTDIR\app\Resources\app.ico$\",0'
   WriteRegStr HKCU "Software\Classes\toonflow\shell\open\command" "" '$\"$INSTDIR\app\Resources\app\protocolLauncher.exe$\" $\"%1$\"'
   IfErrors installFailed
+!endif
   CreateShortCut "$DESKTOP\${appName}.lnk" "$INSTDIR\app\Resources\app\startupLauncher.exe" "" "$INSTDIR\app\Resources\app.ico"
   IfErrors 0 installDone
   ; ACT: 快捷方式不影响程序使用，失败时保留成功安装结果并告知手动启动路径。
@@ -273,11 +277,13 @@ Section "Uninstall"
     IfErrors uninstallMetadataFailed
   ${EndIf}
   ClearErrors
+!if "${appIdentifier}" == "local.toonflow.desktop"
   ReadRegStr $0 HKCU "Software\Classes\toonflow\shell\open\command" ""
   ${If} $0 == '$\"$INSTDIR\app\Resources\app\protocolLauncher.exe$\" $\"%1$\"'
     DeleteRegKey HKCU "Software\Classes\toonflow"
     IfErrors uninstallMetadataFailed
   ${EndIf}
+!endif
   ClearErrors
   RMDir "$INSTDIR"
   ${If} $removeUserData == ${BST_CHECKED}

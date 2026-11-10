@@ -1,13 +1,14 @@
 import type { ElectrobunConfig } from "./.hutch/devkit/api/config/ElectrobunConfig";
 
 const startupTarget = process.platform === "darwin" ? (process.arch === "x64" ? "macX64" : "macArm64") : "windowsX64";
+const isolatedTest = process.env.desktopVariant === "doubaoTest";
 
 export default {
   app: {
-    name: "toonflow",
-    identifier: "local.toonflow.desktop",
+    name: isolatedTest ? "toonflowDoubaoTest" : "toonflow",
+    identifier: isolatedTest ? "local.toonflow.doubaoTest" : "local.toonflow.desktop",
     version: process.env.appVersion ?? "2.0.0",
-    urlSchemes: ["toonflow"],
+    urlSchemes: isolatedTest ? [] : ["toonflow"],
   },
   build: {
     mainProcess: "bun",
@@ -50,7 +51,7 @@ export default {
   },
   release: {
     // ACT: 构建基线和补丁固定取 GitHub；客户端更新源由设置单独控制，默认官方源。
-    baseUrl: `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${process.env.GITHUB_REPOSITORY || "HBAI-Ltd/Toonflow-app"}/releases/latest/download`,
+    baseUrl: `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${isolatedTest ? "alnertodormilon-hue/Toonflow-app" : process.env.GITHUB_REPOSITORY || "HBAI-Ltd/Toonflow-app"}/releases/latest/download`,
     // ACT: 常规构建不访问更新服务器；release:desktop 显式开启增量构建。
     generatePatch: process.env.generateUpdatePatch === "1",
   },
