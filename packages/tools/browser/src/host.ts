@@ -44,7 +44,7 @@ function isBrowserPageUrl(value: string) {
   return isWebUrl(value) || value === "chrome-error://chromewebdata/";
 }
 
-export async function findExecutable(configured: string) {
+export async function findExecutable(configured: string, preferred?: "chrome" | "edge") {
   if (configured && !isAbsolute(configured)) throw new Error("executablePath 必须是浏览器程序的绝对路径");
   // Electrobun 启动器修改环境变量后，Bun Worker 按原始大小写保存 Windows 环境变量。
   const env = process.platform === "win32"
@@ -62,6 +62,12 @@ export async function findExecutable(configured: string) {
         join(root, "Chromium.app", "Contents", "MacOS", "Chromium"),
       ])
       : (process.env.PATH ?? "").split(delimiter).filter(Boolean).flatMap(root => ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "microsoft-edge", "microsoft-edge-stable"].map(name => join(root, name)));
+  // ACT: 消费方可指定已验证的浏览器优先级；未指定时保留工具原有顺序。
+  const preferredPath = (path: string) => {
+    const name = path.split(/[\\/]/).at(-1) ?? "";
+    return preferred === "chrome" ? /^(chrome(?:\.exe)?|chromium(?:-browser)?|google[- ]chrome(?:-stable)?)$/i.test(name) : /edge/i.test(name);
+  };
+  if (preferred && !configured) candidates.sort((left, right) => Number(preferredPath(right)) - Number(preferredPath(left)));
   for (const path of candidates) {
     if (!existsSync(path)) continue;
     if (!(await stat(path)).isFile()) continue;

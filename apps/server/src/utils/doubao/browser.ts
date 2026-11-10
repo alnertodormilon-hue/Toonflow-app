@@ -49,8 +49,10 @@ export async function getProfile(id: string) {
   pending = (async () => {
     const directory = profilePath(id);
     await mkdir(directory, { recursive: true });
-    const browser = await puppeteer.launch({ executablePath: await findExecutable(""), headless: false, pipe: true,
-      userDataDir: directory, defaultViewport: null, args: ["--no-first-run", "--no-default-browser-check"] });
+    const browser = await puppeteer.launch({ executablePath: await findExecutable("", "chrome"), headless: false, pipe: true,
+      userDataDir: directory, defaultViewport: null, args: ["--no-first-run", "--no-default-browser-check"] }).catch(() => {
+        invalid("官方浏览器启动失败。请确认Chrome或Edge能正常打开、关闭该账号旧窗口后重试；若仍失败，请安装或升级Chrome。账号条目已保留，无需重复添加。", 503, "BROWSER_START_FAILED");
+      });
     browser.once("disconnected", () => { profiles.delete(id); });
     try {
       const page = (await browser.pages())[0] ?? await browser.newPage();

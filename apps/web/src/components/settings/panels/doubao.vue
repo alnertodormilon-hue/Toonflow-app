@@ -105,9 +105,9 @@ async function reload(silent = false) {
 async function perform(operation: () => Promise<unknown>) {
   if (busy.value) return;
   busy.value = true;
-  try { await operation(); await reload(true); }
+  try { await operation(); }
   catch (error) { failure(error); }
-  finally { busy.value = false; }
+  finally { await reload(true); busy.value = false; }
 }
 
 function accountName(id: string) { return accounts.value.find(account => account.id === id)?.name ?? "原账号档案已移除"; }
@@ -116,6 +116,7 @@ function addAccount() {
   void perform(async () => {
     const { value } = await ElMessageBox.prompt("为自有账号填写本地名称。官方窗口中自行填写手机号和验证码。", "添加豆包账号", { inputValidator: value => !!value?.trim() && value.trim().length <= 80 || "请输入1—80字名称" });
     const account = await api<Account>("accounts/create", { name: value });
+    await reload(true);
     await api("accounts/open", { id: account.id });
     ElMessage.info("完成官方登录后，点击该账号的“保存登录”，再设置默认账号。");
   });
