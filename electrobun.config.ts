@@ -5,9 +5,9 @@ const isolatedTest = process.env.desktopVariant === "doubaoTest";
 
 export default {
   app: {
-    name: isolatedTest ? "toonflowDoubaoTest" : "toonflow",
+    name: "myStudio",
     identifier: isolatedTest ? "local.toonflow.doubaoTest" : "local.toonflow.desktop",
-    version: process.env.appVersion ?? "2.0.0",
+    version: process.env.appVersion ?? "2.1.0",
     urlSchemes: isolatedTest ? [] : ["toonflow"],
   },
   build: {
@@ -35,6 +35,8 @@ export default {
       "packages/skills": "skills",
       "packages/startup/assets/startup.json": "startup/startup.json",
       "packages/startup/assets/license.txt": "startup/license.txt",
+      "LICENSE": "LICENSE",
+      "packages/assets/openSourceNotices.txt": "openSourceNotices.txt",
       [`packages/startup/assets/${startupTarget}`]: `startup/${startupTarget}`,
     },
     buildFolder: "build/desktop/app",
@@ -51,7 +53,7 @@ export default {
   },
   release: {
     // ACT: 构建基线和补丁固定取 GitHub；客户端更新源由设置单独控制，默认官方源。
-    baseUrl: `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${isolatedTest ? "alnertodormilon-hue/Toonflow-app" : process.env.GITHUB_REPOSITORY || "HBAI-Ltd/Toonflow-app"}/releases/latest/download`,
+    baseUrl: `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${process.env.GITHUB_REPOSITORY || "alnertodormilon-hue/Toonflow-app"}/releases/latest/download`,
     // ACT: 常规构建不访问更新服务器；release:desktop 显式开启增量构建。
     generatePatch: process.env.generateUpdatePatch === "1",
   },

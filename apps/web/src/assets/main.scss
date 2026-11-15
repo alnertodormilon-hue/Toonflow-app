@@ -1,4 +1,31 @@
 html:root {
+  --studio-bg: #f3f4f0;
+  --studio-surface: #fffefa;
+  --studio-surface-muted: #f7f8f4;
+  --studio-border: #dfe4dc;
+  --studio-text: #25312b;
+  --studio-muted: #778078;
+  --studio-accent: var(--el-color-primary);
+  --el-bg-color: var(--studio-surface);
+  --el-bg-color-page: var(--studio-bg);
+  --el-bg-color-overlay: var(--studio-surface);
+  --el-fill-color-blank: var(--studio-surface);
+  --el-fill-color-light: var(--studio-surface-muted);
+  --el-fill-color-lighter: #fafbf7;
+  --el-text-color-primary: var(--studio-text);
+  --el-text-color-regular: #505c54;
+  --el-text-color-secondary: var(--studio-muted);
+  --el-border-color: var(--studio-border);
+  --el-border-color-light: #e9ece5;
+  --el-border-color-lighter: #eff1eb;
+  --el-box-shadow-light: 0 2px 8px rgb(35 49 42 / 5%);
+  --el-box-shadow-lighter: 0 1px 4px rgb(35 49 42 / 4%);
+  --td-bg-color-page: var(--studio-bg);
+  --td-bg-color-container: var(--studio-surface);
+  --td-bg-color-container-hover: var(--studio-surface-muted);
+  --td-text-color-primary: var(--studio-text);
+  --td-text-color-secondary: var(--studio-muted);
+  --td-component-border: var(--studio-border);
   --ui-radius: 8px;
   --ui-radius-small: calc(var(--ui-radius) * 0.5);
   --ui-radius-large: calc(var(--ui-radius) * 1.5);
@@ -36,11 +63,33 @@ html:root {
   .el-tag { --el-tag-border-radius: var(--ui-radius-small); }
 }
 
+html.dark {
+  --studio-bg: #151b18;
+  --studio-surface: #1d2520;
+  --studio-surface-muted: #252f29;
+  --studio-border: #354139;
+  --studio-text: #e9eee8;
+  --studio-muted: #9da99e;
+  --el-fill-color-lighter: #29352d;
+  --el-text-color-regular: #bec8bf;
+  --el-border-color-light: #303c33;
+  --el-border-color-lighter: #29332d;
+}
+
 html,
 body,
 #app {
   margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
 }
+
+body { background: var(--studio-bg); }
+
+.el-card { box-shadow: none; }
+.el-button { font-weight: 500; }
+.el-input__wrapper, .el-textarea__inner { background: var(--studio-surface); }
+.el-dialog, .el-message-box { border: 1px solid var(--studio-border); }
+.vue-flow__background { opacity: 0.45; }
 
 * {
   box-sizing: border-box;

@@ -9,6 +9,7 @@
     "typecheck": "bun scripts/build.ts typecheck"
   },
   "dependencies": {
+    "@toonflow/assets": "workspace:*",
     "@toonflow/file": "workspace:*",
     "@toonflow/server": "workspace:*",
     "@toonflow/startup": "workspace:*",

@@ -4,7 +4,7 @@
       <p>账号在独立官方窗口登录，手机号和验证码由你本人填写。画布点击生成后自动选择关联账号、进入视频模式、上传两张PNG、填写提示词并提交Mini、15秒、9:16、720p任务；登录、人机验证和新的付费或素材授权提示才需要本人处理。</p>
       <p>剩余免费次数无法准确读取时显示未知。本地完成数包含本网关全部已完成任务，不代表今日余额。</p>
     </el-alert>
-    <el-alert v-if="!supported" title="账号会话保护首版需要Windows，请在运行Toonflow的本机操作。" type="warning" :closable="false" />
+    <el-alert v-if="!supported" title="账号会话保护需要Windows，请在运行本应用的电脑上操作。" type="warning" :closable="false" />
     <div class="actions">
       <el-button type="primary" :disabled="busy || !supported" @click="addAccount">添加账号</el-button>
       <el-button :disabled="busy || !supported" @click="configureProvider">配置视频供应商</el-button>

@@ -1,6 +1,7 @@
 import { setLocaleFallback, t, translateMessage } from "@toonflow/server/i18n";
 import { setRuntimeHost } from "@toonflow/server/platform";
 import { detectLocale, normalizeLocale } from "@toonflow/i18n";
+import brand from "@toonflow/assets/brand.ts";
 import { execFile } from "node:child_process";
 import { existsSync, writeAtomicSync } from "@toonflow/file";
 import { file } from "@toonflow/file/bun";
@@ -40,7 +41,7 @@ async function restoreInstallRegistration(installDirectory: string) {
       // SDK 启动和更新会重写卸载入口；安装了 NSIS 时统一交给它处理数据保留选项。
       const { identifier, channel } = await file(resolve(PATHS.RESOURCES_FOLDER, "version.json")).json();
       const registryKey = `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${identifier}.${channel}`;
-      for (const [name, command] of [["UninstallString", `"${uninstaller}"`], ["QuietUninstallString", `"${uninstaller}" /S`]]) {
+      for (const [name, command] of [["DisplayName", brand.name], ["UninstallString", `"${uninstaller}"`], ["QuietUninstallString", `"${uninstaller}" /S`]]) {
         await execFileAsync("reg.exe", ["add", registryKey, "/v", name, "/t", "REG_SZ", "/d", command, "/f"], { windowsHide: true });
       }
       const protocolLauncher = resolve(PATHS.RESOURCES_FOLDER, "app/protocolLauncher.exe");
@@ -57,7 +58,7 @@ async function restoreInstallRegistration(installDirectory: string) {
         }
         // ACT: 自动更新不经过 NSIS；仅补全缺失协议，已有注册（包括其他安装）保持不动。
         if (!protocolExists) {
-          for (const [key, value] of [[protocolKey, "URL:Toonflow Protocol"], [`${protocolKey}\\DefaultIcon`, `"${resolve(PATHS.RESOURCES_FOLDER, "app.ico")}",0`], [commandKey, command]]) {
+          for (const [key, value] of [[protocolKey, `URL:${brand.name} Protocol`], [`${protocolKey}\\DefaultIcon`, `"${resolve(PATHS.RESOURCES_FOLDER, "app.ico")}",0`], [commandKey, command]]) {
             await execFileAsync("reg.exe", ["add", key, "/ve", "/t", "REG_SZ", "/d", value, "/f"], { windowsHide: true });
           }
           await execFileAsync("reg.exe", ["add", protocolKey, "/v", "URL Protocol", "/t", "REG_SZ", "/d", "", "/f"], { windowsHide: true });
@@ -88,7 +89,7 @@ async function start() {
     if (process.platform === "darwin") {
       // ACT: WKWebView 的 Command 编辑快捷键由原生菜单角色交给当前响应者处理。
       ApplicationMenu.setApplicationMenu([
-        { label: "Toonflow", submenu: [
+        { label: brand.name, submenu: [
           { role: "about" },
           { type: "separator" },
           { role: "hide" },
@@ -160,7 +161,7 @@ async function start() {
     const width = Math.min(1280, workArea.width - 64);
     const height = Math.min(960, workArea.height - 64);
     const mainWindow = new BrowserWindow({
-      title: isolatedTest ? "Toonflow 豆包测试版" : "Toonflow",
+      title: brand.name,
       url: `http://127.0.0.1:${connection.port}/?desktop=1${connection.remote ? "&remote=1" : ""}`,
       hidden: Boolean(splash),
       frame: {
@@ -247,7 +248,7 @@ async function start() {
       updater: isolatedTest ? {
         async getLocalInfo() { return versionInfo; },
         updateInfo() { return { updateAvailable: false, updateReady: false }; },
-        async checkForUpdate() { return { error: "豆包测试版请使用新的测试安装包更新" }; },
+        async checkForUpdate() { return { error: "请使用我的创作台新版本安装包更新" }; },
       } : process.platform === "win32" ? createWindowsUpdater(PATHS.RESOURCES_FOLDER, Utils as unknown as Parameters<typeof createWindowsUpdater>[1]) : Updater,
     } satisfies DesktopRuntime;
     if (process.platform === "win32") {

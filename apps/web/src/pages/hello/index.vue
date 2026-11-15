@@ -27,8 +27,9 @@
         </el-button>
       </div>
       <div v-else class="welcomeContent">
-        <h1 id="welcomeTitle">快速开始</h1>
-        <p class="description">选择登录TF-Router可直接自动配置，无需任何复杂操作，即可开始创作。</p>
+        <p class="welcomeEyebrow">{{ brand.name }}</p>
+        <h1 id="welcomeTitle">准备好开始创作了吗</h1>
+        <p class="description">使用已有的 TF-Router 账号自动配置，或添加自己的模型服务。也可以稍后再设置。</p>
 
         <el-button class="loginButton" type="primary" @click="openLogin">
           <icon-login class="buttonIcon" />
@@ -36,25 +37,25 @@
         </el-button>
         <el-button class="mobileConnectButton" :type="deviceHubEnabled ? 'success' : undefined" :plain="deviceHubEnabled" :icon="deviceHubEnabled || mobileConnection.mode === 'remote' ? IconDeviceDesktop : IconQrcode" @click="mobileConnectVisible = true">{{ mobileConnectionLabel }}</el-button>
         <div class="secondaryActions">
-          <el-button class="secondaryButton" round @click="view = 'custom'">
+          <el-button class="secondaryButton" @click="view = 'custom'">
             <icon-key class="buttonIcon" />
             添加私有提供商
           </el-button>
           <span class="separator">或</span>
-          <el-button class="secondaryButton" round :loading="saving" @click="completeSetup">稍后配置</el-button>
+          <el-button class="secondaryButton" :loading="saving" @click="completeSetup">稍后配置</el-button>
         </div>
       </div>
 
       <footer class="pageFooter">
-        <p>© {{ new Date().getFullYear() }} Toonflow · 保留所有权利。</p>
+        <p>© {{ new Date().getFullYear() }} {{ brand.name }} · 你的个人创作空间</p>
       </footer>
     </section>
     <div class="artPanel" aria-hidden="true">
-      <bg class="artBg" />
       <div class="artBrand">
         <span class="artLogo" v-html="logoSvg" />
-        <span class="artName">Toonflow</span>
+        <span class="artName">{{ brand.name }}</span>
       </div>
+      <div class="artCopy"><span>灵感 / 素材 / 作品</span><h2>留一张画布，<br />给每个想法。</h2><p>{{ brand.description }}</p></div>
     </div>
     <mobileConnect v-model="mobileConnectVisible" />
   </main>
@@ -74,7 +75,7 @@ import type { MediaProvider } from "@/components/settings/panels/mediaModel/type
 import { useHelloStore } from "@/stores/hello";
 import anonymousData from "@/lib/anonymousData";
 import logoSvg from "@toonflow/assets/logo.svg?raw";
-import bg from "./bg.vue";
+import brand from "@toonflow/assets/brand.ts";
 import languageSelect from "@/components/languageSelect.vue";
 import { deviceHubEnabled, mobileConnection, mobileConnectionLabel } from "@/lib/mobile";
 
@@ -213,29 +214,19 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 .hello {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.1fr 0.9fr;
   min-height: 100svh;
-  padding: 8px;
-  background: var(--el-bg-color);
+  padding: 16px;
+  background: var(--el-bg-color-page);
   color: var(--el-text-color-primary);
-  font-family: "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-
-  .pageLanguage {
-    position: fixed;
-    top: 16px;
-    inset-inline-end: calc(50% + 8px);
-    z-index: 2;
-    max-width: calc(50% - 24px);
-  }
-
+  .pageLanguage { position: fixed; top: 22px; inset-inline-end: calc(45% + 24px); z-index: 2; max-width: calc(55% - 32px); }
   .welcomePanel {
     display: grid;
     grid-template-rows: 1fr auto 1fr;
     gap: 32px;
     min-width: 0;
     min-height: 544px;
-    padding: 48px clamp(24px, 4.4vw, 64px);
-
+    padding: 48px clamp(24px, 5vw, 80px);
     .providerContent {
       grid-row: 1;
       display: grid;
@@ -244,206 +235,63 @@ onBeforeUnmount(() => {
       min-width: 0;
       min-height: 0;
       overflow: hidden;
-
-      .providerHeader {
-        h1 {
-          margin: 16px 0 0;
-          font-size: 28px;
-          font-weight: 650;
-        }
-      }
-
-      .providerBody {
-        min-height: 0;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        padding: 2px;
-      }
-
+      .providerHeader h1 { margin: 16px 0 0; font-size: 26px; font-weight: 600; }
+      .providerBody { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 2px; }
       .loginBody {
         min-height: 0;
-        overflow-y: hidden;
+        width: min(500px, 100%);
+        overflow-y: auto;
         overscroll-behavior: contain;
-        background-color: #fff;
+        background: #fff;
+        border: 1px solid var(--el-border-color-light);
         border-radius: var(--ui-radius);
-        width: 500px;
-
-        .loginFrame {
-          display: block;
-          width: 100%;
-          height: 100%;
-          min-height: 640px;
-          border: 0;
-          background: transparent;
-        }
+        .loginFrame { display: block; width: 100%; height: 100%; min-height: 640px; border: 0; background: transparent; }
       }
-
-      .loginFeedback {
-        display: grid;
-        gap: 12px;
-      }
+      .loginFeedback { display: grid; gap: 12px; }
     }
-
     .welcomeContent {
       grid-row: 2;
       width: 100%;
-      max-width: 420px;
-      text-align: center;
-
-      h1 {
-        margin: 0 0 12px;
-        font-size: clamp(32px, 3.4vw, 40px);
-        font-weight: 650;
-        line-height: 1.35;
-        letter-spacing: -0.8px;
-      }
-
-      .description {
-        margin: 0 0 32px;
-        color: var(--el-text-color-secondary);
-        font-size: 14px;
-        line-height: 1.8;
-      }
-
-      .buttonIcon {
-        width: 18px;
-        height: 18px;
-        margin-inline-end: 8px;
-      }
-
-      .loginButton {
-        width: 100%;
-        height: auto;
-        min-height: 50px;
-        padding: 12px;
-        white-space: normal;
-        border-radius: calc(var(--ui-radius) * 1.625);
-        font-size: 16px;
-        font-weight: 600;
-      }
-
-      .secondaryActions {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        margin-top: 20px;
-
-        .separator {
-          color: var(--el-text-color-secondary);
-          font-size: 13px;
-        }
-
-        .secondaryButton {
-          height: auto;
-          min-height: 36px;
-          margin: 0;
-          padding: 8px 16px;
-          white-space: normal;
-          font-size: 13px;
-        }
-      }
-
+      max-width: 440px;
+      .welcomeEyebrow { margin: 0 0 22px; color: var(--el-color-primary); font-size: 13px; font-weight: 600; letter-spacing: 1px; }
+      h1 { margin: 0 0 16px; font-size: clamp(28px, 3vw, 36px); font-weight: 600; line-height: 1.4; letter-spacing: -0.8px; }
+      .description { margin: 0 0 32px; color: var(--el-text-color-secondary); font-size: 14px; line-height: 1.9; }
+      .buttonIcon { width: 18px; height: 18px; margin-inline-end: 8px; }
+      .loginButton { width: 100%; height: auto; min-height: 48px; padding: 12px; white-space: normal; border-radius: var(--ui-radius); font-size: 14px; font-weight: 500; }
+      .secondaryActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 10px; margin-top: 18px; }
+      .separator { color: var(--el-text-color-secondary); font-size: 12px; }
+      .secondaryButton { height: auto; min-height: 36px; margin: 0; padding: 8px 12px; white-space: normal; font-size: 13px; }
       .mobileConnectButton { width: 100%; margin: 12px 0 0; min-height: 42px; }
     }
-
-    .pageFooter {
-      grid-row: 3;
-      align-self: end;
-      color: var(--el-text-color-secondary);
-      font-size: 12px;
-
-      p {
-        margin: 10px 0 0;
-        line-height: 1.6;
-      }
-    }
+    .pageFooter { grid-row: 3; align-self: end; color: var(--el-text-color-secondary); font-size: 11px; p { margin: 10px 0 0; line-height: 1.6; } }
   }
-
   &.configuring {
     height: 100dvh;
     min-height: 0;
     overflow: hidden;
-
-    .welcomePanel {
-      grid-template-rows: minmax(0, 1fr) auto;
-      gap: 24px;
-      min-height: 0;
-
-      .pageFooter {
-        grid-row: 2;
-      }
-    }
+    .welcomePanel { grid-template-rows: minmax(0, 1fr) auto; gap: 24px; min-height: 0; .pageFooter { grid-row: 2; } }
   }
-
   .artPanel {
     position: relative;
-    min-width: 0;
     display: flex;
-    align-items: flex-start;
-    justify-content: flex-end;
-    padding: 28px;
-    border-radius: calc(var(--ui-radius) * 1.125);
-    overflow: hidden;
-    background: radial-gradient(ellipse at 76% 82%, #f3dcb1 0%, transparent 46%), radial-gradient(ellipse at 25% 52%, #667ab5 0%, transparent 52%),
-      radial-gradient(ellipse at 90% 18%, #369889 0%, transparent 48%), linear-gradient(145deg, #123f38, #467f72 48%, #a8c9ad);
-
-    .artBg {
-      z-index: 0;
-    }
-
-    .artBrand {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      color: #fff;
-
-      .artLogo {
-        width: 44px;
-        height: 44px;
-        line-height: 0;
-
-        :deep(svg) {
-          display: block;
-          width: 100%;
-          height: 100%;
-        }
-
-        :deep(path) {
-          fill: #fff;
-        }
-      }
-
-      .artName {
-        font-size: 30px;
-        font-weight: 600;
-        letter-spacing: 0.4px;
-      }
-    }
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 48px;
+    min-width: 0;
+    padding: clamp(28px, 4vw, 60px);
+    border: 1px solid var(--el-border-color-light);
+    border-radius: var(--ui-radius-large);
+    background: var(--el-fill-color-light);
+    .artBrand { display: flex; align-items: center; gap: 12px; color: var(--el-text-color-primary); }
+    .artLogo { width: 34px; height: 34px; line-height: 0; :deep(svg) { display: block; width: 100%; height: 100%; } }
+    .artName { font-size: 18px; font-weight: 600; }
+    .artCopy { margin: auto 0; span { color: var(--el-color-primary); font-size: 12px; letter-spacing: 2px; } h2 { margin: 24px 0; font-size: clamp(30px, 4vw, 50px); font-weight: 500; line-height: 1.55; letter-spacing: -1px; } p { max-width: 280px; color: var(--el-text-color-secondary); font-size: 13px; line-height: 1.9; } }
   }
-
-  @media (max-width: 700px) {
+  @media (max-width: 800px) {
     grid-template-columns: 1fr;
-
-    .pageLanguage {
-      inset-inline-end: 16px;
-      max-width: calc(100% - 32px);
-    }
-
-    .welcomePanel {
-      padding: 32px 20px;
-
-      .welcomeContent {
-        justify-self: center;
-      }
-    }
-
-    .artPanel {
-      display: none;
-    }
+    .pageLanguage { inset-inline-end: 20px; max-width: calc(100% - 40px); }
+    .welcomePanel { padding: 48px 20px 24px; .welcomeContent { justify-self: center; } }
+    .artPanel { display: none; }
   }
 }
 </style>

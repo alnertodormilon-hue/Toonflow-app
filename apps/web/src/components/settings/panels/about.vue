@@ -1,9 +1,9 @@
 <template>
   <div class="about">
     <div class="brand">
-      <div class="brandMark"><img class="brandLogo" :src="logoUrl" alt="Toonflow Logo" /></div>
+      <div class="brandMark"><img class="brandLogo" :src="logoUrl" :alt="brand.name + '标志'" /></div>
       <div class="brandInfo">
-        <h3>Toonflow</h3>
+        <h3>{{ brand.name }}</h3>
         <div class="brandMeta">
           <span v-if="currentVersion">v{{ currentVersion }}</span>
           <el-tag v-if="clientBuild?.channel || snapshot?.channel" type="info" size="small" round>{{ clientBuild?.channel || snapshot?.channel }}</el-tag>
@@ -29,7 +29,7 @@
                 <icon-brand-github v-if="updateSource === 'github'" :size="14" aria-hidden="true" />
                 <icon-world v-else :size="14" aria-hidden="true" />
               </template>
-              <el-option label="官方源" value="official" />
+              <el-option label="项目源" value="official" />
               <el-option label="GitHub" value="github" />
               <el-option v-if="customUpdateUrl" label="自定义源" value="custom" />
             </el-select>
@@ -53,94 +53,25 @@
       </div>
     </el-card>
 
-    <el-card class="infoCard repositoryCard" shadow="never">
-      <a class="repositoryLink" :href="repositoryUrl" target="_blank" rel="noopener noreferrer" aria-label="GitHub 仓库：HBAI-Ltd/Toonflow-app">
-        <icon-brand-github class="repositoryIcon" :size="22" aria-hidden="true" />
-        <div class="repositoryInfo">
-          <span class="repositoryTitle">GitHub 仓库</span>
-        </div>
-        <icon-external-link class="externalIcon" :size="16" aria-hidden="true" />
-      </a>
-    </el-card>
-
-    <el-card class="infoCard repositoryCard" shadow="never">
-      <a class="repositoryLink" href="https://api.toonflow.net/" target="_blank" rel="noopener noreferrer">
-        <icon-world class="repositoryIcon" :size="22" aria-hidden="true" />
-        <div class="repositoryInfo">
-          <span class="repositoryTitle">官方中转平台 TF-Router</span>
-        </div>
-        <icon-external-link class="externalIcon" :size="16" aria-hidden="true" />
-      </a>
-    </el-card>
-
-    <el-card class="infoCard" shadow="never">
-      <div class="cardHeader">
-        <div class="cardLabel">
-          <icon-brand-wechat :size="20" aria-hidden="true" />
-          <span>微信交流群</span>
-        </div>
-        <el-popover trigger="click" placement="top" title="微信扫码加入交流群" :width="196">
-          <template #reference>
-            <el-button size="small" :icon="IconQrcode">展示二维码</el-button>
-          </template>
-          <q-r-code
-            :value="communityUrl"
-            :size="168"
-            type="svg"
-            color="#000000"
-            bgColor="#ffffff"
-            borderless
-            role="img"
-            aria-label="Toonflow 交流群二维码" />
-          <div class="tips">
-            Toonflow 是为爱发电的开源项目。欢迎文明交流、友善反馈；回复可能需要一些时间，请避免责问或命令式沟通，感谢你的理解与尊重。
-          </div>
-        </el-popover>
-      </div>
-    </el-card>
-
-    <section class="sponsorPanel" aria-label="赞助商">
-      <h3 class="sponsorTitle">
-        <icon-gift :size="20" aria-hidden="true" />
-        赞助商
-        <span class="sponsorHint">排名不分先后</span>
-        <el-popover trigger="click" placement="top" title="微信扫码洽谈商务合作" :width="196">
-          <template #reference>
-            <el-button class="sponsorContact" size="small" type="primary" link>成为赞助商</el-button>
-          </template>
-          <q-r-code
-            value="https://work.weixin.qq.com/u/vc0f54596c5837d05a?v=5.0.8.70675"
-            :size="168"
-            type="svg"
-            color="#000000"
-            bgColor="#ffffff"
-            borderless
-            role="img"
-            aria-label="Toonflow 商务合作二维码" />
-        </el-popover>
-      </h3>
-      <div v-if="sponsors.length" class="sponsorGrid" @keydown.esc="closeSponsor">
-        <el-popover
-          v-for="sponsor in sponsors"
-          :key="sponsor.id"
-          role="dialog"
-          placement="top-start"
-          :title="sponsor.name"
-          width="min(360px, calc(100vw - 32px))"
-          :visible="activeSponsorId === sponsor.id"
-          :hideAfter="0"
-          :persistent="false"
-          @update:visible="(visible) => setSponsorVisible(sponsor.id, visible)">
-          <template #reference>
-            <button class="sponsorEntry" type="button" :aria-label="`查看 ${sponsor.name} 详情`">
-              <span v-if="sponsor.logoUrl" class="sponsorLogo"><img :src="sponsor.logoUrl" :alt="`${sponsor.name} logo`" /></span>
-              <span class="sponsorName">{{ sponsor.name }}</span>
-            </button>
-          </template>
-          <messageMarkdown v-if="sponsor.readme.trim()" class="sponsorReadme" :content="sponsor.readme" @keydown.esc="closeSponsor" />
-        </el-popover>
-      </div>
+    <section class="projectSummary">
+      <h4>为自己的作品，留一张工作台。</h4>
+      <p>{{ brand.description }}</p>
+      <div class="capabilities"><span>创作画布</span><span>素材与项目</span><span>模型服务</span></div>
     </section>
+
+    <el-card class="infoCard repositoryCard" shadow="never">
+      <a class="repositoryLink" :href="repositoryUrl" target="_blank" rel="noopener noreferrer" :aria-label="brand.name + '项目仓库'">
+        <icon-brand-github class="repositoryIcon" :size="20" aria-hidden="true" />
+        <div class="repositoryInfo"><span class="repositoryTitle">项目仓库</span><span class="repositoryDescription">查看源码、文档与版本记录</span></div>
+        <icon-external-link class="externalIcon" :size="16" aria-hidden="true" />
+      </a>
+    </el-card>
+
+    <details class="licenseDisclosure">
+      <summary>开源许可与第三方声明</summary>
+      <p>本项目保留所使用开源软件的版权与许可声明。</p>
+      <pre>{{ notices }}</pre>
+    </details>
 
     <el-dialog v-model="resultVisible" title="版本更新" width="min(480px, 92vw)" alignCenter appendToBody>
       <div class="updateResult" aria-live="polite" :aria-busy="working">
@@ -209,11 +140,10 @@
 <script setup lang="ts">
 import { translate, t } from "@toonflow/i18n/vue";
 
-import { computed, defineAsyncComponent, onMounted, onBeforeUnmount, ref } from "vue";
+import { computed, onMounted, onBeforeUnmount, ref } from "vue";
 import axios from "axios";
 import { ElMessage } from "element-plus";
 import { isMobile, isDesktop, isRemoteConnection } from "@/lib/platform";
-import { QRCode } from "tdesign-vue-next";
 import {
   IconRefresh,
   IconBrandGithub,
@@ -222,13 +152,11 @@ import {
   IconArrowUpCircle,
   IconCircleCheck,
   IconArrowRight,
-  IconGift,
   IconWorld,
-  IconBrandWechat,
-  IconQrcode,
 } from "@tabler/icons-vue";
 import logoUrl from "@toonflow/assets/logo.svg";
-import tf, { type TfSponsor } from "@/lib/tf";
+import brand from "@toonflow/assets/brand.ts";
+import notices from "@toonflow/assets/openSourceNotices.txt?raw";
 import { saveSettings } from "@/stores/settings";
 import {
   desktopUpdateSource as updateSource,
@@ -241,9 +169,7 @@ import {
   runDesktopUpdate,
 } from "@/stores/desktopUpdate";
 
-const messageMarkdown = defineAsyncComponent(() => import("@/components/messageMarkdown.vue"));
-const repositoryUrl = "https://github.com/HBAI-Ltd/Toonflow-app";
-const communityUrl = "https://work.weixin.qq.com/u/vc36adcc89845edcbe?v=5.0.3.63936&bb=85b8d228e8";
+const repositoryUrl = brand.repositoryUrl;
 const clientBuild = ref<{ version: string; channel: string }>();
 const currentVersion = computed(() => isDesktop && isRemoteConnection
   ? clientBuild.value?.version || "" : snapshot.value?.version || import.meta.env.appVersion);
@@ -255,7 +181,6 @@ const updateProgress = computed(() => snapshot.value?.updateProgress);
 const updatePercentage = computed(() => !updateInProgress.value && snapshot.value?.updateReady ? 100
   : updateProgress.value?.total ? Math.min(100, Math.floor(updateProgress.value.received / updateProgress.value.total * 100)) : 0);
 const resultVisible = ref(false);
-const activeSponsorId = ref<number>();
 const controller = new AbortController();
 const resultTitle = computed(() => {
   if (snapshot.value?.installFailure) return translate("上次更新未成功");
@@ -279,15 +204,6 @@ const resultMessage = computed(() => {
   return snapshot.value.canUpdate ? translate("有新的版本可用，下载完成后可重启更新。") : translate("当前客户端不支持应用内更新，请下载安装包。");
 });
 
-const sponsors = ref<TfSponsor[]>([]);
-
-onMounted(async () => {
-  try {
-    sponsors.value = await tf.getSponsorList({ signal: controller.signal });
-  } catch (error) {
-    if (!controller.signal.aborted) ElMessage.error(getUpdateError(error));
-  }
-});
 
 onMounted(async () => {
   if (!isDesktop) return;
@@ -303,16 +219,6 @@ onMounted(async () => {
   }
 });
 onBeforeUnmount(() => controller.abort());
-
-function setSponsorVisible(id: number, visible: boolean) {
-  if (visible || activeSponsorId.value === id) activeSponsorId.value = visible ? id : undefined;
-}
-
-function closeSponsor(event: KeyboardEvent) {
-  if (!activeSponsorId.value) return;
-  event.stopPropagation();
-  activeSponsorId.value = undefined;
-}
 
 function openUpdate() {
   resultVisible.value = true;
@@ -362,409 +268,63 @@ async function runUpdate(nextAction: "read" | "check" | "download" | "apply") {
 .about {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 4px 0 12px;
-
-    .brandMark {
-      display: grid;
-      place-items: center;
-      flex-shrink: 0;
-      width: 60px;
-      height: 60px;
-      border-radius: calc(var(--ui-radius) * 1.5);
-      background: var(--el-fill-color-light);
-
-      .brandLogo {
-        width: 42px;
-        height: 42px;
-        object-fit: contain;
-
-        .dark & {
-          filter: invert(1);
-        }
-      }
-    }
-
-    .brandInfo {
-      min-width: 0;
-
-      h3 {
-        margin: 0 0 8px;
-        color: var(--el-text-color-primary);
-        font-size: 20px;
-        font-weight: 600;
-      }
-
-      .brandMeta {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
-        color: var(--el-text-color-secondary);
-        font-size: 12px;
-      }
-    }
+  gap: 14px;
+  .brand { display: flex; align-items: center; gap: 14px; padding: 6px 0 14px; }
+  .brandMark { display: grid; place-items: center; flex-shrink: 0; width: 54px; height: 54px; border: 1px solid var(--el-border-color-light); border-radius: var(--ui-radius-large); background: var(--el-bg-color); }
+  .brandLogo { width: 34px; height: 34px; object-fit: contain; }
+  .brandInfo { min-width: 0; h3 { margin: 0 0 8px; color: var(--el-text-color-primary); font-size: 21px; font-weight: 600; } }
+  .brandMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--el-text-color-secondary); font-size: 12px; }
+  .projectSummary {
+    padding: 22px;
+    border: 1px solid var(--el-border-color-light);
+    border-radius: var(--ui-radius);
+    background: var(--el-fill-color-extra-light);
+    h4 { margin: 0 0 10px; color: var(--el-text-color-primary); font-size: 16px; font-weight: 500; }
+    p { margin: 0; color: var(--el-text-color-secondary); font-size: 13px; line-height: 1.8; }
+    .capabilities { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .capabilities span { padding: 4px 9px; border: 1px solid var(--el-border-color-lighter); border-radius: var(--ui-radius-small); color: var(--el-text-color-regular); background: var(--el-bg-color); font-size: 11px; }
   }
-
   .infoCard {
     min-width: 0;
-    border-radius: calc(var(--ui-radius) * 1);
-
-    :deep(.el-card__body) {
-      padding: 14px;
-    }
-
-    .cardHeader {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-
-      .cardLabel {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--el-text-color-primary);
-        font-size: 14px;
-        font-weight: 600;
-      }
-    }
-
-    &.updateCard {
-      .cardHeader {
-        .updateCopy {
-          flex: 1;
-          min-width: 120px;
-
-          .cardDescription {
-            margin-top: 4px;
-          }
-        }
-
-        .updateActions {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-
-          a {
-            text-decoration: none;
-          }
-
-          :deep(.el-select) {
-            width: 120px;
-          }
-        }
-      }
-    }
-
-    .buildInfo {
-      display: flex;
-      align-items: baseline;
-      flex-wrap: wrap;
-      gap: 8px 12px;
-      margin-top: 12px;
-      color: var(--el-text-color-secondary);
-      font-size: 12px;
-
-      code {
-        overflow-wrap: anywhere;
-      }
-    }
-
-    .installFailureNotice {
-      margin-top: 14px;
-      padding: 12px;
-      border-radius: var(--ui-radius);
-      background: var(--el-color-danger-light-9);
-
-      strong { color: var(--el-color-danger); }
-      p { margin: 8px 0 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
-    }
-
-    &.repositoryCard {
-      transition: border-color 0.2s;
-
-      :deep(.el-card__body) {
-        padding: 0;
-      }
-      &:hover {
-        border-color: var(--el-border-color-darker);
-      }
-
-      .repositoryLink {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px;
-        color: var(--el-text-color-primary);
-        text-decoration: none;
-
-        &:focus-visible {
-          outline: 2px solid var(--el-color-primary);
-          outline-offset: -2px;
-          border-radius: calc(var(--ui-radius) * 1);
-        }
-
-        .repositoryIcon,
-        .externalIcon {
-          flex-shrink: 0;
-        }
-        .externalIcon {
-          color: var(--el-text-color-secondary);
-        }
-
-        .repositoryInfo {
-          display: flex;
-          flex: 1;
-          flex-direction: column;
-          gap: 6px;
-          min-width: 0;
-
-          .repositoryTitle {
-            font-size: 14px;
-            font-weight: 600;
-          }
-        }
-      }
-    }
+    border-radius: var(--ui-radius);
+    box-shadow: none;
+    :deep(.el-card__body) { padding: 16px; }
+    .cardHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .cardLabel { display: flex; align-items: center; gap: 8px; color: var(--el-text-color-primary); font-size: 13px; font-weight: 500; }
+    .updateCopy { flex: 1; min-width: 120px; }
+    .updateActions { display: flex; align-items: center; gap: 8px; a { text-decoration: none; } :deep(.el-select) { width: 112px; } }
+    .buildInfo { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; color: var(--el-text-color-secondary); font-size: 11px; code { overflow-wrap: anywhere; } }
+    .installFailureNotice { margin-top: 14px; padding: 12px; border-radius: var(--ui-radius); background: var(--el-color-danger-light-9); strong { color: var(--el-color-danger); } p { margin: 8px 0 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; } }
+    &.repositoryCard :deep(.el-card__body) { padding: 0; }
+    .repositoryLink { display: flex; align-items: center; gap: 12px; padding: 16px; color: var(--el-text-color-primary); text-decoration: none; &:focus-visible { outline: 2px solid var(--el-color-primary); outline-offset: -2px; border-radius: inherit; } }
+    .repositoryInfo { display: flex; flex: 1; flex-direction: column; gap: 4px; }
+    .repositoryTitle { font-size: 13px; font-weight: 500; }
+    .repositoryDescription { font-size: 11px; color: var(--el-text-color-secondary); }
+    .repositoryIcon, .externalIcon { flex-shrink: 0; color: var(--el-text-color-secondary); }
   }
-
-  .sponsorPanel {
-    margin-top: 8px;
-    min-width: 0;
-
-    .sponsorTitle {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 0 0 8px;
-      color: var(--el-text-color-primary);
-      font-size: 16px;
-      font-weight: 600;
-
-      .sponsorHint {
-        color: var(--el-text-color-secondary);
-        font-size: 12px;
-        font-weight: 400;
-      }
-
-      .sponsorContact {
-        margin-left: auto;
-      }
-    }
-
-    .sponsorGrid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, 110px), 1fr));
-      gap: 6px;
-
-      .sponsorEntry {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        min-width: 0;
-        height: 48px;
-        padding: 7px 8px;
-        border: 1px solid var(--el-border-color-lighter);
-        border-radius: var(--ui-radius);
-        background: var(--el-bg-color);
-        color: var(--el-text-color-primary);
-        font: inherit;
-        text-align: left;
-        cursor: pointer;
-
-        &:hover,
-        &[aria-expanded="true"] {
-          border-color: var(--el-border-color-darker);
-          background: var(--el-fill-color-light);
-        }
-
-        &:focus-visible {
-          outline: 2px solid var(--el-color-primary);
-          outline-offset: 2px;
-        }
-
-        .sponsorLogo {
-          display: block;
-          flex-shrink: 0;
-          width: 32px;
-          height: 32px;
-          padding: 4px;
-          box-sizing: border-box;
-          border-radius: var(--ui-radius);
-          background: #fff;
-
-          img {
-            display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-          }
-        }
-
-        .sponsorName {
-          flex: 1;
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          font-size: 13px;
-          font-weight: 500;
-        }
-      }
-    }
+  .licenseDisclosure {
+    padding: 14px 0;
+    border-top: 1px solid var(--el-border-color-lighter);
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
+    summary { width: fit-content; cursor: pointer; color: var(--el-text-color-regular); &:focus-visible { outline: 2px solid var(--el-color-primary); outline-offset: 4px; } }
+    p { line-height: 1.7; }
+    pre { max-height: 320px; overflow: auto; padding: 16px; border: 1px solid var(--el-border-color-light); border-radius: var(--ui-radius); background: var(--el-fill-color-extra-light); font-size: 11px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
   }
 }
-
-.tips {
-  margin: 0;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.sponsorReadme {
-  max-height: min(320px, 50vh);
-  overflow-y: auto;
-  overflow-wrap: anywhere;
-}
-
 .updateResult {
-  padding: 8px 0;
-
-  .resultHeader {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-
-    .resultIcon {
-      display: grid;
-      place-items: center;
-      flex-shrink: 0;
-      width: 40px;
-      height: 40px;
-      border-radius: calc(var(--ui-radius) * 1.25);
-      background: var(--el-color-primary-light-9);
-      color: var(--el-color-primary);
-
-      &.warning {
-        background: var(--el-color-warning-light-9);
-        color: var(--el-color-warning);
-      }
-      &.success {
-        background: var(--el-color-success-light-9);
-        color: var(--el-color-success);
-      }
-      .loadingIcon {
-        animation: spin 1.2s linear infinite;
-      }
-    }
-
-    .resultCopy {
-      min-width: 0;
-
-      h3 {
-        margin: 0 0 6px;
-        color: var(--el-text-color-primary);
-        font-size: 15px;
-        font-weight: 600;
-      }
-      p {
-        margin: 0;
-        color: var(--el-text-color-secondary);
-        font-size: 13px;
-        line-height: 1.6;
-        overflow-wrap: anywhere;
-      }
-    }
-  }
-
-  .updateProgress {
-    margin-top: 20px;
-
-    .progressHeader {
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 8px;
-      color: var(--el-text-color-secondary);
-      font-size: 12px;
-    }
-  }
-
-  .releaseInfo {
-    margin-top: 20px;
-    padding: 14px;
-    border: 1px solid var(--el-border-color-lighter);
-    border-radius: calc(var(--ui-radius) * 1);
-
-    .versionComparison {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-
-      .versionItem {
-        display: flex;
-        flex: 1;
-        flex-direction: column;
-        gap: 8px;
-        min-width: 0;
-
-        span {
-          color: var(--el-text-color-secondary);
-          font-size: 12px;
-        }
-        strong {
-          color: var(--el-text-color-primary);
-          font-size: 18px;
-          font-weight: 600;
-          overflow-wrap: anywhere;
-        }
-        &.latestVersion strong {
-          color: var(--el-color-primary);
-        }
-      }
-
-      .versionArrow {
-        flex-shrink: 0;
-        color: var(--el-text-color-placeholder);
-      }
-    }
-
-    .releaseMeta {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 14px;
-      padding-top: 12px;
-      border-top: 1px solid var(--el-border-color-lighter);
-      color: var(--el-text-color-secondary);
-      font-size: 12px;
-
-      code {
-        overflow-wrap: anywhere;
-      }
-    }
-  }
+  .resultHeader { display: flex; gap: 14px; align-items: flex-start; }
+  .resultIcon { display: grid; place-items: center; flex-shrink: 0; width: 42px; height: 42px; border-radius: var(--ui-radius); background: var(--el-color-primary-light-9); color: var(--el-color-primary); &.warning { background: var(--el-color-warning-light-9); color: var(--el-color-warning); } &.success { background: var(--el-color-success-light-9); color: var(--el-color-success); } }
+  .resultCopy { min-width: 0; h3 { margin: 1px 0 8px; font-size: 16px; font-weight: 600; } p { margin: 0; color: var(--el-text-color-regular); font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; } }
+  .updateProgress { margin-top: 22px; }
+  .progressHeader { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; color: var(--el-text-color-secondary); font-size: 12px; }
+  .releaseInfo { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--el-border-color-lighter); }
+  .versionComparison { display: flex; align-items: center; gap: 20px; }
+  .versionItem { display: flex; flex: 1; flex-direction: column; gap: 8px; min-width: 0; span { color: var(--el-text-color-secondary); font-size: 12px; } strong { font-size: 16px; font-weight: 500; overflow-wrap: anywhere; } }
+  .latestVersion strong { color: var(--el-color-primary); }
+  .versionArrow { color: var(--el-text-color-secondary); }
+  .releaseMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 16px; code { color: var(--el-text-color-secondary); font-size: 11px; overflow-wrap: anywhere; } }
+  .loadingIcon { animation: updateSpin 1s linear infinite; }
 }
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .updateResult .resultHeader .resultIcon .loadingIcon {
-    animation: none;
-  }
-}
+@keyframes updateSpin { to { transform: rotate(360deg); } }
 </style>

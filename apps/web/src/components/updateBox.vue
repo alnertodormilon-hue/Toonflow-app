@@ -13,7 +13,7 @@
     <template #header="{ titleId, close }">
       <div class="updateHeader">
         <div class="versionInfo">
-          <h2 :id="titleId" class="updateTitle">Toonflow <span class="versionNumber">v{{ version }}</span></h2>
+          <h2 :id="titleId" class="updateTitle">{{ brand.name }} <span class="versionNumber">v{{ version }}</span></h2>
           <div class="buildInfo"><span class="buildLabel">构建代码</span><code>{{ buildCode }}</code></div>
         </div>
         <button class="closeButton" type="button" aria-label="关闭更新说明" @click="close">
@@ -52,6 +52,7 @@
 </template>
 
 <script setup lang="ts">
+import brand from "@toonflow/assets/brand.ts";
 import { computed, defineAsyncComponent } from "vue";
 import updateNotes from "./updateBox.md?raw";
 

@@ -68,59 +68,43 @@
                       tag="a"
                       text
                       :icon="IconBook"
-                      href="https://qcn7xdsqgc4z.feishu.cn/docx/RXFqdgR2Xo0dXZxGfd0cZCGgnwf"
+                      :href="`${brand.repositoryUrl}#readme`"
                       target="_blank"
                       rel="noopener noreferrer"
                       @click="helpVisible = false">
-                      使用教程
+                      项目文档
                     </el-button>
                     <el-button
                       class="helpAction"
                       tag="a"
                       text
                       :icon="IconBug"
-                      href="https://docs.qq.com/smartsheet/form/EmvmQBrmlPmr%2Fss_vsqk2v%2FvhiGzE?tab=ss_vsqk2v"
+                      :href="`${brand.repositoryUrl}/issues/new`"
                       target="_blank"
                       rel="noopener noreferrer"
-                      title="Toonflow 需求/BUG反馈表"
+                      :title="`${brand.name} 问题反馈`"
                       @click="helpVisible = false">
-                      汇报 BUG
+                      问题反馈
                     </el-button>
-                    <el-button class="helpAction" text :icon="IconBrandWechat" @click="showContact('community')">加入交流群</el-button>
-                    <el-button class="helpAction" text :icon="IconBriefcase" @click="showContact('business')">商务合作</el-button>
                   </div>
                 </el-popover>
               </span>
             </el-tooltip>
           </div>
         </el-card>
-        <el-tooltip v-if="!agentVisible" content="Toonflow Agent" placement="top" :showArrow="false" :hideAfter="0">
+        <el-tooltip v-if="!agentVisible" :content="`${brand.shortName}助手`" placement="top" :showArrow="false" :hideAfter="0">
           <el-button
             class="agentButton"
             :class="{ standalone: activePanel !== 'canvas' }"
             :aria-expanded="agentVisible"
-            aria-label="Toonflow Agent"
+            :aria-label="`${brand.shortName}助手`"
             aria-controls="agentPanel"
-            @click="agentVisible = !agentVisible"></el-button>
+            @click="agentVisible = !agentVisible"><icon-sparkles :size="20" aria-hidden="true" /></el-button>
         </el-tooltip>
       </div>
     </div>
     <floatingAgent v-model="agentVisible" @resize="agentWidth = $event" />
     <settings v-model="settingsVisible" />
-    <el-dialog v-model="contactVisible" :title="contactInfo.title" width="min(360px, calc(100vw - 32px))" alignCenter appendToBody>
-      <div class="contactContent">
-        <q-r-code
-          :value="contactInfo.url"
-          :size="192"
-          type="svg"
-          color="#000000"
-          bgColor="#ffffff"
-          borderless
-          role="img"
-          :aria-label="`${contactInfo.title}二维码`" />
-        <p class="contactTip">{{ contactInfo.tip }}</p>
-      </div>
-    </el-dialog>
   </main>
 </template>
 
@@ -128,9 +112,9 @@
 import { computed, defineAsyncComponent, nextTick, onMounted, onScopeDispose, provide, ref, shallowRef, watch, type ComponentPublicInstance } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import { IconVector, IconFileText, IconPointer, IconHandStop, IconPlus, IconHelp, IconBook, IconBug, IconBrandWechat, IconBriefcase } from "@tabler/icons-vue";
+import { IconVector, IconFileText, IconPointer, IconHandStop, IconPlus, IconHelp, IconBook, IconBug, IconSparkles } from "@tabler/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { QRCode } from "tdesign-vue-next";
+import brand from "@toonflow/assets/brand.ts";
 import settings from "@/components/settings/index.vue";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { registerWorkspaceControl, waitForControlValue } from "@/lib/mcpControl";
@@ -156,27 +140,6 @@ const agentVisible = ref(true);
 const agentWidth = ref(0);
 const settingsVisible = ref(false);
 const helpVisible = ref(false);
-const contactVisible = ref(false);
-const contactType = ref<"community" | "business">("community");
-const contacts = {
-  community: {
-    title: "加入交流群",
-    url: "https://work.weixin.qq.com/u/vc36adcc89845edcbe?v=5.0.3.63936&bb=85b8d228e8",
-    tip: "Toonflow 是为爱发电的开源项目。欢迎文明交流、友善反馈；回复可能需要一些时间，请避免责问或命令式沟通，感谢你的理解与尊重。",
-  },
-  business: {
-    title: "商务合作",
-    url: "https://work.weixin.qq.com/u/vc0f54596c5837d05a?v=5.0.8.70675",
-    tip: "此联系方式仅用于商务合作接洽，不提供问题答疑。使用问题欢迎在交流群交流，需求与 BUG 可通过反馈表提交。感谢理解。",
-  },
-};
-const contactInfo = computed(() => contacts[contactType.value]);
-
-function showContact(type: "community" | "business") {
-  contactType.value = type;
-  helpVisible.value = false;
-  contactVisible.value = true;
-}
 const canvasPanelRef = ref<InstanceType<typeof canvasPanel>>();
 const documentPanelCache = shallowRef<{ directory: string; instance: InstanceType<typeof documentPanel> }>();
 const documentPanelRef = computed(() => documentPanelCache.value?.directory === workspaceStore.project?.directory ? documentPanelCache.value?.instance : undefined);
@@ -341,65 +304,36 @@ function saveDocumentNode(directory: string, canvasPath: string, nodeId: string,
   position: relative;
   width: 100%;
   height: 100dvh;
-  background-color: var(--el-bg-color);
-
-  .canvasPanel {
-    position: absolute;
-    inset: 0;
-    width: calc(100% - var(--agentWidth, 0px));
-    container: canvasWorkspace / inline-size;
-
-    &.backgroundPanel {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-  }
-
-  .workspaceMenu {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    z-index: 5;
-  }
-
+  background-color: var(--el-bg-color-page);
+  .canvasPanel { position: absolute; inset: 0; width: calc(100% - var(--agentWidth, 0px)); container: canvasWorkspace / inline-size; &.backgroundPanel { opacity: 0; visibility: hidden; pointer-events: none; } }
+  .workspaceMenu { position: absolute; top: 16px; left: 16px; z-index: 5; }
   .workspaceTools {
     position: absolute;
     inset: 0;
     width: calc(100% - var(--agentWidth, 0px));
     container: workspaceTools / inline-size;
     pointer-events: none;
-
     .panelSwitcher {
-      --el-border-radius-base: 999px;
+      --el-border-radius-base: var(--ui-radius);
       --el-segmented-bg-color: var(--el-bg-color-overlay);
       --el-segmented-item-selected-color: var(--el-color-primary);
       --el-segmented-item-selected-bg-color: var(--el-color-primary-light-9);
       position: absolute;
-      top: 15px;
+      top: 16px;
       left: 50%;
       z-index: 5;
-      min-height: 32px;
+      min-height: 34px;
       padding: 3px;
       border: 1px solid var(--el-border-color-light);
-      box-shadow: var(--el-box-shadow-lighter);
+      box-shadow: none;
       font-size: 12px;
       transform: translateX(-50%);
       pointer-events: auto;
-
-      .panelOption {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-        padding: 0 3px;
-        line-height: 24px;
-      }
+      .panelOption { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 6px; line-height: 24px; }
     }
-
     .bottomTools {
       position: absolute;
-      bottom: 15px;
+      bottom: 18px;
       left: 50%;
       z-index: 5;
       display: flex;
@@ -407,204 +341,41 @@ function saveDocumentNode(directory: string, canvasPath: string, nodeId: string,
       gap: 8px;
       transform: translateX(-50%);
       pointer-events: auto;
-
       .toolMenu {
         flex-shrink: 0;
         transition: none;
-
+        box-shadow: none;
+        border-color: var(--el-border-color-light);
         .toolMenuContent {
           display: flex;
           align-items: center;
-          gap: 2px;
-
-          .toolButton {
-            width: 32px;
-            height: 32px;
-            margin: 0;
-            padding: 0;
-
-            &.addNodeButton {
-              margin-right: 8px;
-              color: var(--el-bg-color);
-              background: var(--el-text-color-primary);
-              border-color: transparent;
-
-              &:hover { opacity: 0.85; }
-              &.is-disabled { opacity: 0.45; }
-            }
-          }
-
+          gap: 3px;
+          .toolButton { width: 32px; height: 32px; margin: 0; padding: 0; }
+          .addNodeButton { margin-right: 6px; color: var(--el-color-white); background: var(--el-color-primary); border-color: transparent; &:hover { opacity: 0.85; } &.is-disabled { opacity: 0.45; } }
           .toolTrigger { display: inline-flex; }
-
           .el-divider { margin: 0; }
         }
       }
-
       .agentButton {
         position: absolute;
         left: calc(100% + 8px);
+        display: grid;
+        place-items: center;
         width: 40px;
         height: 40px;
-        flex-shrink: 0;
         margin: 0;
         padding: 0;
-        border: 1px solid color-mix(in srgb, #6edfdc 30%, var(--el-border-color-light));
-        border-radius: 50%;
-        background: linear-gradient(145deg, color-mix(in srgb, #96f9f0 15%, var(--el-bg-color-overlay)), var(--el-bg-color-overlay) 65%,
-          color-mix(in srgb, #8588ff 18%, var(--el-bg-color-overlay)));
-        box-shadow: inset 0 1px 0 #ffffff52;
-        color: #f4fffe;
-        overflow: hidden;
-        isolation: isolate;
-        transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
-
-        &.standalone {
-          position: relative;
-          left: auto;
-        }
-
-        &::before,
-        &::after {
-          content: "";
-          position: absolute;
-          inset: 4px;
-          border-radius: 50%;
-          pointer-events: none;
-        }
-
-        &::before {
-          z-index: -2;
-          background: radial-gradient(ellipse at 22% 15%, #adfff0, transparent 50%), radial-gradient(ellipse at 85% 85%, #b29aff, transparent 55%),
-            radial-gradient(ellipse at 85% 20%, #25dccc, transparent 50%), linear-gradient(150deg, #10aec1, #3765c6 60%, #765bd3);
-          animation: agentFlow 5.4s linear infinite;
-          filter: saturate(1.05);
-          transition: filter 180ms ease;
-        }
-
-        &::after {
-          z-index: -1;
-          background: radial-gradient(ellipse 12% 18% at 50% 50%, #ffffffa6, #d3fff773 35%, transparent 80%),
-            radial-gradient(ellipse at 32% 18%, #ffffff99, transparent 42%), radial-gradient(ellipse at 65% 95%, #17246070, transparent 65%);
-          background-size: 160% 160%, 100% 100%, 100% 100%;
-          background-position: 75% 85%, 0 0, 0 0;
-          background-repeat: no-repeat;
-          box-shadow: inset 0 0 0 1px #ffffff52, inset 0 2px 3px #ffffff80, inset 0 -3px 6px #16305b73;
-          animation: agentShine 3.2s linear infinite;
-        }
-
-        &:hover::before {
-          filter: saturate(1.2);
-        }
-
-        &:hover {
-          transform: translateY(-1px);
-          border-color: #87f2eb99;
-          box-shadow: inset 0 1px 0 #ffffff70;
-        }
-
-        &:active {
-          transform: scale(0.95);
-        }
-
-        &:focus-visible {
-          outline: 2px solid var(--el-color-primary);
-          outline-offset: 3px;
-        }
-
-        .agentLogo {
-          width: 24px;
-          height: 24px;
-          flex-shrink: 0;
-          background: currentColor;
-          mask-size: contain;
-          mask-position: center;
-          mask-repeat: no-repeat;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          transition: none;
-
-          &::before,
-          &::after {
-            animation: none;
-          }
-        }
+        border: 1px solid var(--el-color-primary-light-7);
+        border-radius: var(--ui-radius-large);
+        background: var(--el-color-primary-light-9);
+        color: var(--el-color-primary);
+        box-shadow: none;
+        &.standalone { position: relative; left: auto; }
+        &:hover { border-color: var(--el-color-primary-light-5); background: var(--el-color-primary-light-8); }
+        &:focus-visible { outline: 2px solid var(--el-color-primary); outline-offset: 3px; }
       }
     }
   }
 }
-
-@keyframes agentFlow {
-  from {
-    transform: rotate(0deg) scale(1);
-  }
-  25% {
-    transform: rotate(90deg) scale(1.06, 1.02);
-  }
-  50% {
-    transform: rotate(180deg) scale(1.02, 1.06);
-  }
-  75% {
-    transform: rotate(270deg) scale(1.05, 1.03);
-  }
-  to {
-    transform: rotate(360deg) scale(1);
-  }
-}
-
-@keyframes agentShine {
-  0%,
-  100% {
-    background-size: 160% 160%, 100% 100%, 100% 100%;
-    background-position: 75% 85%, 0 0, 0 0;
-  }
-  12.5% {
-    background-position: 40% 98%, 0 0, 0 0;
-  }
-  25% {
-    background-size: 180% 140%, 100% 100%, 100% 100%;
-    background-position: 10% 75%, 0 0, 0 0;
-  }
-  37.5% {
-    background-position: 2% 40%, 0 0, 0 0;
-  }
-  50% {
-    background-size: 160% 160%, 100% 100%, 100% 100%;
-    background-position: 25% 10%, 0 0, 0 0;
-  }
-  62.5% {
-    background-position: 60% 2%, 0 0, 0 0;
-  }
-  75% {
-    background-size: 140% 180%, 100% 100%, 100% 100%;
-    background-position: 95% 25%, 0 0, 0 0;
-  }
-  87.5% {
-    background-position: 98% 60%, 0 0, 0 0;
-  }
-}
-.helpMenu {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  .helpAction {
-    justify-content: flex-start;
-    margin-left: 0;
-  }
-}
-
-.contactContent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-
-  .contactTip {
-    margin: 0;
-    color: var(--el-text-color-secondary);
-    font-size: 12px;
-    line-height: 1.7;
-  }
-}
+.helpMenu { display: flex; flex-direction: column; gap: 4px; .helpAction { justify-content: flex-start; margin-left: 0; } }
 </style>

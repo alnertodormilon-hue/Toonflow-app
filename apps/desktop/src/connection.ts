@@ -1,6 +1,7 @@
 import express from "express";
 import { once } from "node:events";
 import { hostname } from "node:os";
+import brand from "@toonflow/assets/brand.ts";
 import { posix } from "node:path";
 import type { AddressInfo, Socket } from "node:net";
 import type { Server } from "node:http";
@@ -21,7 +22,7 @@ export default async function createDesktopConnection(app: express.Express, dire
 
   async function start() {
     const connection = await createRemoteConnection(directory, {
-      deviceName: `Toonflow ${hostname()}`,
+      deviceName: `${brand.name} ${hostname()}`,
       appVersion: app.locals.appVersion,
       validateTarget(source) {
         const target = new URL(source);

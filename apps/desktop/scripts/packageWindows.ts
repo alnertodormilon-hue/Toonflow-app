@@ -4,6 +4,7 @@ import { file, write } from "@toonflow/file/bun";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import desktopConfig from "../../../electrobun.config";
+import brand from "@toonflow/assets/brand.ts";
 
 if (process.platform !== "win32" || process.arch !== "x64") {
   throw new Error("NSIS 打包需要 Windows x64 环境。");
@@ -97,7 +98,7 @@ try {
   await write(tarFile, Bun.zstdDecompressSync(archive));
   await $`${makensis} /INPUTCHARSET UTF8 /DwebView2Dir=${webViewDir} /DrunningChecker=${runningChecker} /DappIcon=${appIcon} /DappVersion=${
     desktopConfig.app.version
-  } /DappName=${desktopConfig.app.name === "toonflow" ? "Toonflow" : desktopConfig.app.name} /DappIdentifier=${desktopConfig.app.identifier} /DappTar=${tarFile} /DappHash=${manifest.hash} /DoutputFile=${outputFile} /DinitializeInstallScript=${initializeInstallScript} ${join(installerDir, "installer.nsi")}`;
+  } /DappName=${brand.name} /DappIdentifier=${desktopConfig.app.identifier} /DappTar=${tarFile} /DappHash=${manifest.hash} /DoutputFile=${outputFile} /DinitializeInstallScript=${initializeInstallScript} ${join(installerDir, "installer.nsi")}`;
   console.log(`NSIS 安装包：${outputFile}`);
 } finally {
   if (dirname(realpathSync(stagingDir)) !== realpathSync(nsisDir)) throw new Error("拒绝清理暂存目录以外的路径。");

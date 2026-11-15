@@ -8,13 +8,13 @@
               <div class="welcomeHeader">
                 <span class="welcomeIcon" aria-hidden="true"><span class="welcomeLogo" :style="{ maskImage: `url(${logoUrl})` }" /></span>
                 <div>
-                  <p class="welcomeLabel">你好，我是 Toonflow 助手</p>
+                  <p class="welcomeLabel">{{ brand.name }} · 创作助手</p>
                   <h3>从一个想法开始</h3>
                 </div>
               </div>
               <p class="welcomeDescription">聊聊你的故事、画面或镜头，让我们一起把想法落到画布上。</p>
               <div class="welcomeSuggestions">
-                <el-button v-for="item in welcomeSuggestions" :key="item.label" class="welcomeSuggestion" text bg :disabled="locked" :aria-label="`填入提示：${item.label}`" @click="fillPrompt(item.prompt)">
+                <el-button v-for="item in welcomeSuggestions" :key="item.label" class="welcomeSuggestion" :disabled="locked" :aria-label="`填入提示：${item.label}`" @click="fillPrompt(item.prompt)">
                   <component :is="item.icon" :size="19" aria-hidden="true" />
                   <span class="suggestionContent"><strong>{{ item.label }}</strong><span>{{ item.description }}</span></span>
                   <icon-arrow-up-right class="suggestionArrow" :size="15" aria-hidden="true" />
@@ -172,6 +172,7 @@ import {
 import { ElMessage } from "element-plus";
 import { getReadableFileExtension, getReadableFileMimeType, readableFileAccept } from "@toonflow/server/documentFormats";
 import logoUrl from "@toonflow/assets/logo.svg";
+import brand from "@toonflow/assets/brand.ts";
 import modelPopover from "@/components/modelPopover.vue";
 import skillMenu from "./skillMenu.vue";
 import mentionMenu from "./mentionMenu.vue";
@@ -958,8 +959,8 @@ watch(() => !props.initialSession?.parentFile && !!workspaceStore.pendingAgentMe
     .welcomeMessage {
       display: flex;
       flex-direction: column;
-      gap: 18px;
-      padding: 28px 16px 16px;
+      gap: 16px;
+      padding: 30px 16px 20px;
       color: var(--el-text-color-primary);
 
       .welcomeHeader {
@@ -974,7 +975,8 @@ watch(() => !props.initialSession?.parentFile && !!workspaceStore.pendingAgentMe
           width: 42px;
           height: 42px;
           border-radius: var(--ui-radius-large);
-          background: var(--el-color-primary-light-9);
+          border: 1px solid var(--el-border-color-light);
+          background: var(--el-bg-color);
           color: var(--el-color-primary);
 
           .welcomeLogo {
@@ -1005,6 +1007,11 @@ watch(() => !props.initialSession?.parentFile && !!workspaceStore.pendingAgentMe
           text-align: left;
           white-space: normal;
           line-height: 1.5;
+          border-color: var(--el-border-color-lighter);
+          background: transparent;
+          box-shadow: none;
+
+          &:hover { border-color: var(--el-color-primary-light-5); background: var(--el-fill-color-extra-light); }
 
           > span { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; }
           svg { flex-shrink: 0; color: var(--el-text-color-secondary); }

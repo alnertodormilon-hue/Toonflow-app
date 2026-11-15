@@ -16,6 +16,7 @@
     "apps/desktop": {
       "name": "@toonflow/desktop",
       "dependencies": {
+        "@toonflow/assets": "workspace:*",
         "@toonflow/file": "workspace:*",
         "@toonflow/i18n": "workspace:*",
         "@toonflow/server": "workspace:*",
@@ -581,6 +582,7 @@
       "name": "@toonflow/startup",
       "version": "0.0.0",
       "dependencies": {
+        "@toonflow/assets": "workspace:*",
         "@toonflow/file": "workspace:*",
       },
     },

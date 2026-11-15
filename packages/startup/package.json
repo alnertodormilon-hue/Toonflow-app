@@ -5,6 +5,7 @@
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
+    "@toonflow/assets": "workspace:*",
     "@toonflow/file": "workspace:*"
   }
 }
